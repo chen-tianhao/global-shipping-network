@@ -11,7 +11,8 @@
     "typecheck": "tsc --noEmit",
     "smoke": "node scripts/smoke.mjs",
     "build:geo": "python scripts/build_geo.py --input ../WSC_SimulationChallenge_2026/SimulationChallenge2026_Py/Input",
-    "verify:geo": "python scripts/verify_geo.py"
+    "verify:geo": "python scripts/verify_geo.py",
+    "verify:motion": "node scripts/verify_motion.mjs"
   },
   "dependencies": {
     "@types/node": "^26.6.5",

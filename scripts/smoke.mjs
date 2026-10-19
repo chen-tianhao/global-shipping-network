@@ -21,7 +21,9 @@ const CHROME =
   'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
 const TARGET = process.argv[2] ?? process.env.WSC_URL ?? 'http://127.0.0.1:4173/';
 const DEBUG_PORT = 9333;
-const WAIT_MS = 9000;
+// SwiftShader + Cesium shader compilation can take ~10 s on a cold profile;
+// 9 s made the first probe race the bootstrap and report a false "not ready".
+const WAIT_MS = 15000;
 
 const profileDir = fs.mkdtempSync(path.join(os.tmpdir(), 'wsc-smoke-'));
 
@@ -160,8 +162,84 @@ try {
       const shown = vessels.primitives.filter((p) => p.show).length;
       const bar = document.querySelector('.timebar');
       const box = bar ? bar.getBoundingClientRect() : null;
+
+      // Every visible vessel must sit on its own route polyline. This is the
+      // end-to-end guard against the antimeridian sampling bug, where vessels
+      // were drawn thousands of nautical miles off the route (over land).
+      const routeById = new Map(w.model.routes.map((route) => [route.id, route]));
+      const tracks = w.model.motion ? w.model.motion.vessels : [];
+      const toVec = (lon, lat) => Cesium.Cartesian3.fromDegrees(lon, lat, 0);
+      const crossTrackNm = (point, a, b) => {
+        const P = toVec(point[0], point[1]);
+        const A = toVec(a[0], a[1]);
+        const B = toVec(b[0], b[1]);
+        const n = Cesium.Cartesian3.cross(A, B, new Cesium.Cartesian3());
+        const length = Cesium.Cartesian3.magnitude(n);
+        if (length < 1e-9) return Cesium.Cartesian3.distance(P, A) / 1852;
+        Cesium.Cartesian3.divideByScalar(n, length, n);
+        const sinAngle =
+          Math.abs(Cesium.Cartesian3.dot(P, n)) /
+          Cesium.Cartesian3.magnitude(P);
+        const greatCircle =
+          (Math.asin(Math.min(1, sinAngle)) * 6371008.8) / 1852;
+        const toA = Cesium.Cartesian3.distance(P, A) / 1852;
+        const toB = Cesium.Cartesian3.distance(P, B) / 1852;
+        return Math.min(greatCircle, toA, toB);
+      };
+      let maxOffRouteNm = 0;
+      let worstOffRoute = null;
+      for (let i = 0; i < vessels.primitives.length; i += 1) {
+        const primitive = vessels.primitives[i];
+        if (!primitive.show) continue;
+        const track = tracks[i];
+        const route = track ? routeById.get(track.routeId) : null;
+        if (!route || route.waypoints.length < 2) continue;
+        const carto = Cesium.Cartographic.fromCartesian(primitive.position);
+        const point = [
+          Cesium.Math.toDegrees(carto.longitude),
+          Cesium.Math.toDegrees(carto.latitude),
+        ];
+        let best = Number.POSITIVE_INFINITY;
+        for (let j = 1; j < route.waypoints.length; j += 1) {
+          const distance = crossTrackNm(
+            point,
+            route.waypoints[j - 1],
+            route.waypoints[j],
+          );
+          if (distance < best) best = distance;
+        }
+        if (best > maxOffRouteNm) {
+          maxOffRouteNm = best;
+          worstOffRoute = {
+            id: track.vesselId,
+            route: track.routeId,
+            nm: Math.round(best),
+          };
+        }
+      }
+
+      const disruptionLayer = w.layers.find((l) => l.id === 'disruptions');
+      const disruptionItems = disruptionLayer ? disruptionLayer.items.length : 0;
+      const congestedLegs = disruptionLayer
+        ? disruptionLayer.items.filter(
+            (item) => item.disruption.type === 'congested_leg',
+          ).length
+        : 0;
+      const congestedWithGeometry = disruptionLayer
+        ? disruptionLayer.items.filter(
+            (item) =>
+              item.disruption.type === 'congested_leg' &&
+              item.polylines.length > 0,
+          ).length
+        : 0;
+
       return {
         ready: true,
+        maxOffRouteNm: Math.round(maxOffRouteNm),
+        worstOffRoute,
+        disruptionItems,
+        congestedLegs,
+        congestedWithGeometry,
         timeBar: box
           ? { x: Math.round(box.x), y: Math.round(box.y), w: Math.round(box.width), h: Math.round(box.height) }
           : 'missing',
@@ -196,8 +274,10 @@ try {
   const second = await probe(`
     (() => {
       const w = window.__WSC__;
+      if (!w) return { ready: false, day: Number.NaN, first: null };
       const vessels = w.layers.find((l) => l.id === 'vessels');
       return {
+        ready: true,
         day: Cesium.JulianDate.secondsDifference(
           w.viewer.clock.currentTime,
           Cesium.JulianDate.fromIso8601('2026-01-01T00:00:00Z')) / 86400,
@@ -233,6 +313,21 @@ try {
   const failures = [];
   if (!first.ready) failures.push('app did not initialise (window.__WSC__ missing)');
   if (!first.vesselShown) failures.push('no vessels are visible');
+  if (first.maxOffRouteNm > 10) {
+    failures.push(
+      `vessel ${first.worstOffRoute?.id ?? '?'} is ${first.maxOffRouteNm} nm off route`,
+    );
+  }
+  if (first.disruptionItems !== 8) {
+    failures.push(
+      `expected 8 disruption overlays, found ${first.disruptionItems}`,
+    );
+  }
+  if (first.congestedWithGeometry !== first.congestedLegs) {
+    failures.push(
+      `${first.congestedLegs - first.congestedWithGeometry} congested legs have no route geometry`,
+    );
+  }
   if (!(second.day > first.day)) failures.push('clock is not advancing');
   if (first.skyBox !== 'none') failures.push('star sky box is present (should be disabled)');
   if (!moved) failures.push('vessels did not change position over 2.5 s');

@@ -20,7 +20,7 @@ export interface SceneLayer {
 }
 
 export interface PickPayload {
-  kind: 'port' | 'vessel' | 'route';
+  kind: 'port' | 'vessel' | 'route' | 'disruption';
   id: string;
   label: string;
 }

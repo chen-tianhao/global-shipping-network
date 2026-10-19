@@ -9,6 +9,7 @@
  */
 
 import {
+  ClockRange,
   Color,
   JulianDate,
   Viewer,
@@ -90,7 +91,10 @@ export async function createViewer(options: CreateViewerOptions): Promise<Viewer
   viewer.clock.startTime = startJulian;
   viewer.clock.stopTime = stopJulian;
   viewer.clock.currentTime = startJulian;
-  viewer.clock.clockRange = 1; // CLAMPED - loop back to start instead of stalling
+  // LOOP_STOP wraps back to the start after the last day. CLAMPED (the numeric
+  // value this used to be) silently freezes at stopTime: the clock keeps
+  // ticking, the play button still reads "pause", and nothing happens.
+  viewer.clock.clockRange = ClockRange.LOOP_STOP;
   viewer.clock.multiplier = 3600; // one wall-clock second ~= one simulation hour
 
   // The timeline widget zooms to the clock's *default* range (now -> now+1d)

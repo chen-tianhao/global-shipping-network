@@ -7,8 +7,11 @@
  */
 
 import { el, keyValue, panel, row, swatch } from './dom';
-import { toCss, VESSEL_STATE_RGBA } from '../viewmodel/colorScales';
-import { LEGEND_PORT_WAITING } from '../viewmodel/colorScales';
+import {
+  portWaitingStops,
+  toCss,
+  VESSEL_STATE_RGBA,
+} from '../viewmodel/colorScales';
 import { waitingTeuByPort } from '../viewmodel/sceneModel';
 import type { SceneModel } from '../viewmodel/sceneModel';
 import type { PickPayload } from '../cesium/layers/SceneLayer';
@@ -51,8 +54,13 @@ export function createHud(
 
   const portLegend = el('div', 'legend');
   portLegend.append(el('h3', 'legend__title', '港口 · 等待 TEU'));
-  for (const [value, color] of LEGEND_PORT_WAITING) {
-    portLegend.append(row(swatch(toCss(color)), String(value)));
+  const portStops = portWaitingStops(
+    model.ports.map((port) => waitingTeuByPort(model, port.id)),
+  );
+  for (const [value, color] of portStops) {
+    portLegend.append(
+      row(swatch(toCss(color)), Math.round(value).toLocaleString('zh-CN')),
+    );
   }
 
   const vesselLegend = el('div', 'legend');
@@ -95,7 +103,7 @@ export function createHud(
     details.innerHTML = '';
     if (!payload) {
       details.append(
-        el('p', 'details__empty', '点击地球上的港口、航线或船舶查看详情。'),
+        el('p', 'details__empty', '点击地球上的港口、航线、船舶或扰动事件查看详情。'),
       );
       return;
     }
@@ -139,8 +147,40 @@ export function createHud(
         );
         return;
       }
-      // Congested-leg payloads carry a synthetic "from--to" id.
-      details.append(el('p', 'details__note', '航段级扰动事件'));
+      return;
+    }
+
+    if (payload.kind === 'disruption') {
+      const disruption = model.disruptions.find(
+        (item) => item.id === payload.id,
+      );
+      if (!disruption) return;
+
+      const target = Array.isArray(disruption.target)
+        ? disruption.target
+            .map((id) => model.ports.find((port) => port.id === id)?.name ?? id)
+            .join(' → ')
+        : (model.ports.find((port) => port.id === String(disruption.target))
+            ?.name ?? String(disruption.target));
+
+      details.append(
+        keyValue([
+          ['类型', disruption.type === 'closed_port' ? '港口关闭' : '航段拥堵'],
+          ['目标', target],
+          [
+            '时间窗',
+            `Day ${Math.round(disruption.startDay)} – ${Math.round(
+              disruption.endDay,
+            )}`,
+          ],
+          [
+            '强度',
+            disruption.type === 'closed_port'
+              ? '关闭'
+              : `×${disruption.magnitude}`,
+          ],
+        ]),
+      );
       return;
     }
 

@@ -18,11 +18,11 @@ import { RouteLayer } from '../cesium/layers/RouteLayer';
 import { VesselLayer } from '../cesium/layers/VesselLayer';
 import type { SceneLayer } from '../cesium/layers/SceneLayer';
 import type { PickPayload } from '../cesium/layers/SceneLayer';
-import { flyToHome, flyToPort, flyToRoute } from '../cesium/camera';
+import { flyToHome, flyToPoints, flyToPort, flyToRoute } from '../cesium/camera';
 import { installPicking } from '../cesium/picking';
 import { StaticDataProvider } from '../data/providers/staticDataProvider';
 import { PlaceholderMotionProvider } from '../data/providers/placeholderMotionProvider';
-import { createSceneModel, type SceneModel } from '../viewmodel/sceneModel';
+import { createSceneModel, disruptionPath, type SceneModel } from '../viewmodel/sceneModel';
 import { createHud } from '../ui/hud';
 import { createTimeBar } from '../ui/timeBar';
 import { el } from '../ui/dom';
@@ -149,6 +149,13 @@ export async function bootstrap(mount: {
         } else if (payload.kind === 'route') {
           const route = model.routes.find((item) => item.id === payload.id);
           if (route) flyToRoute(viewer, route);
+        } else if (payload.kind === 'disruption') {
+          const disruption = model.disruptions.find(
+            (item) => item.id === payload.id,
+          );
+          if (disruption) {
+            flyToPoints(viewer, disruptionPath(model, disruption));
+          }
         }
       },
     });

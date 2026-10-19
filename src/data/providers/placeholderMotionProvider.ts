@@ -15,17 +15,28 @@
 import { fetchJson, fetchText, parseCsv, toNumber } from '../provider';
 import type {
   NetworkGraph,
-  PortVM,
   RouteVM,
   SimDay,
   TimeRange,
   VesselTrack,
   VesselTrackSet,
 } from '../types';
+import {
+  greatCircleDistanceNm,
+  initialBearingDeg,
+  interpolateGreatCircle,
+} from '../geo/geoMath';
+import { mapPorts, mapSegments } from './shared';
 
-const EARTH_RADIUS_NM = 3440.065;
-/** Sampling step. 0.25 day = 6 h keeps the whole 360-day horizon manageable. */
-const STEP_DAYS = 0.25;
+/**
+ * Sampling step: 1 hour, matching the plan's 37万-point estimate.
+ *
+ * A coarser 6-hour step made consecutive samples 120 nm apart; `VesselLayer`
+ * interpolates linearly between them, so a route bend inside one step was cut
+ * by up to ~18 nm - enough to clip a coastline. At 1 hour the step is 20 nm and
+ * the corner cut is a few nautical miles at most.
+ */
+const STEP_DAYS = 1 / 24;
 const DEFAULT_SPEED_KNOTS = 20;
 
 interface VesselClassRow {
@@ -58,14 +69,7 @@ export class PlaceholderMotionProvider {
       });
     }
 
-    const ports: PortVM[] = portsFile.ports.map((raw) => ({
-      id: String(raw.id ?? ''),
-      name: String(raw.name ?? ''),
-      lon: Number(raw.lon),
-      lat: Number(raw.lat),
-      berthCount: Number(raw.berthCount ?? 0),
-      coordsVerified: Boolean(raw.coordsVerified),
-    }));
+    const ports = mapPorts(portsFile.ports);
 
     const planByRoute = new Map<string, { className: string; count: number }>();
     for (const [index, row] of parseCsv(planText).entries()) {
@@ -83,6 +87,7 @@ export class PlaceholderMotionProvider {
           name: String(raw.name ?? id),
           startDayOfWeek: raw.startDayOfWeek === null ? null : Number(raw.startDayOfWeek),
           waypoints: (raw.waypoints as Array<[number, number]>) ?? [],
+          segments: mapSegments(raw.segments, ports),
           isAlternative: false,
           totalDistanceNm: Number(raw.totalDistanceNm ?? 0),
           vessels: plan?.count ?? 0,
@@ -145,7 +150,7 @@ function buildGeometry(route: RouteVM): Geometry | null {
   if (points.length < 2) return null;
   const cumulativeNm: number[] = [0];
   for (let i = 1; i < points.length; i += 1) {
-    cumulativeNm.push(cumulativeNm[i - 1] + distanceNm(points[i - 1], points[i]));
+    cumulativeNm.push(cumulativeNm[i - 1] + greatCircleDistanceNm(points[i - 1], points[i]));
   }
   return { points, cumulativeNm, totalNm: cumulativeNm[cumulativeNm.length - 1] };
 }
@@ -169,7 +174,14 @@ function buildTrack(
   const offsetNm = phase * geometry.totalNm;
 
   for (let f = 0; f < frames; f += 1) {
-    const travelledNm = (timeline[f] * nmPerDay + offsetNm) % geometry.totalNm;
+    // Positive modulo: a negative simulation day (warm-up) must not produce a
+    // negative distance, which would extrapolate before the first waypoint.
+    const travelledNm =
+      geometry.totalNm > 0
+        ? (((timeline[f] * nmPerDay + offsetNm) % geometry.totalNm) +
+            geometry.totalNm) %
+          geometry.totalNm
+        : 0;
     const sample = sampleAlong(geometry, travelledNm);
     lon[f] = sample.lon;
     lat[f] = sample.lat;
@@ -181,36 +193,40 @@ function buildTrack(
   return { vesselId, routeId, lon, lat, heading, teu, state };
 }
 
+/**
+ * Position `distanceNm` along the route.
+ *
+ * The interpolation is spherical, not linear in lon/lat, because Cesium draws
+ * the route as a geodesic. Linear interpolation across a transpacific leg (or
+ * across the antimeridian, where the raw longitude delta is ~±270 degrees)
+ * places vessels on the wrong side of the planet - visibly on land.
+ */
 function sampleAlong(
   geometry: Geometry,
   distanceNm: number,
 ): { lon: number; lat: number; heading: number } {
-  const { points, cumulativeNm } = geometry;
-  let index = 1;
-  while (index < cumulativeNm.length && cumulativeNm[index] < distanceNm) index += 1;
+  const { points, cumulativeNm, totalNm } = geometry;
+  const target =
+    totalNm > 0 ? ((distanceNm % totalNm) + totalNm) % totalNm : 0;
+
+  // Binary search: at a 1-hour step the old linear scan became O(frames x
+  // waypoints) and added seconds to start-up on the long routes.
+  let low = 1;
+  let high = cumulativeNm.length - 1;
+  while (low < high) {
+    const mid = (low + high) >> 1;
+    if (cumulativeNm[mid] < target) low = mid + 1;
+    else high = mid;
+  }
+  const index = low;
   const a = points[index - 1];
   const b = points[Math.min(index, points.length - 1)];
   const segmentStart = cumulativeNm[index - 1];
   const segmentLength = cumulativeNm[index] - segmentStart;
-  const ratio = segmentLength > 0 ? (distanceNm - segmentStart) / segmentLength : 0;
+  const ratio = segmentLength > 0 ? (target - segmentStart) / segmentLength : 0;
 
-  const lon = a[0] + (b[0] - a[0]) * ratio;
-  const lat = a[1] + (b[1] - a[1]) * ratio;
-  const heading = (Math.atan2(b[0] - a[0], b[1] - a[1]) * 180) / Math.PI;
-  return { lon, lat, heading: (heading + 360) % 360 };
-}
-
-export function distanceNm(
-  a: readonly [number, number],
-  b: readonly [number, number],
-): number {
-  let dlon = b[0] - a[0];
-  if (dlon > 180) dlon -= 360;
-  else if (dlon < -180) dlon += 360;
-  const meanLat = ((a[1] + b[1]) / 2) * (Math.PI / 180);
-  const dx = dlon * (Math.PI / 180) * Math.cos(meanLat);
-  const dy = (b[1] - a[1]) * (Math.PI / 180);
-  return Math.hypot(dx, dy) * EARTH_RADIUS_NM;
+  const [lon, lat] = interpolateGreatCircle(a, b, ratio);
+  return { lon, lat, heading: initialBearingDeg(a, b) };
 }
 
 /** Cumulative-distance helper exported for the real trajectory provider. */

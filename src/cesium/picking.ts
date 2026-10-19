@@ -61,7 +61,8 @@ function isPayload(value: unknown): value is PickPayload {
   return (
     (candidate.kind === 'port' ||
       candidate.kind === 'vessel' ||
-      candidate.kind === 'route') &&
+      candidate.kind === 'route' ||
+      candidate.kind === 'disruption') &&
     typeof candidate.id === 'string'
   );
 }

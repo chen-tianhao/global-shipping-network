@@ -21,12 +21,29 @@ export interface PortVM {
   tunnelledToSea?: boolean;
 }
 
+export interface RouteSegmentVM {
+  sequence: number;
+  /** Port ids, resolved from the port names in `routes.json`. */
+  fromPortId: string;
+  toPortId: string;
+  fromPortName: string;
+  toPortName: string;
+  /** Land-avoiding geometry of this leg, produced at build time. */
+  waypoints: ReadonlyArray<readonly [number, number]>;
+  routeDistanceNm: number;
+}
+
 export interface RouteVM {
   id: string;
   name: string;
   startDayOfWeek: number | null;
   /** Land-avoiding geometry produced at build time. Renderers never re-route. */
   waypoints: ReadonlyArray<readonly [number, number]>;
+  /**
+   * Per-leg geometry. Disruption overlays use this to draw a congested leg
+   * along the real sea route instead of a straight port-to-port line.
+   */
+  segments: RouteSegmentVM[];
   isAlternative: boolean;
   totalDistanceNm: number;
   vessels?: number;

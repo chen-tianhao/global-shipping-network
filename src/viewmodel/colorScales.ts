@@ -4,14 +4,57 @@
  */
 
 export type RGBA = readonly [number, number, number, number];
+export type ColorStop = readonly [value: number, color: RGBA];
 
-const PORT_WAITING_STOPS: Array<[number, RGBA]> = [
-  [0, [0.29, 0.72, 0.85, 1]],
-  [400, [0.35, 0.85, 0.55, 1]],
-  [900, [0.98, 0.83, 0.36, 1]],
-  [1600, [0.95, 0.55, 0.28, 1]],
-  [2600, [0.86, 0.25, 0.25, 1]],
+const WAITING_COLORS: RGBA[] = [
+  [0.29, 0.72, 0.85, 1],
+  [0.35, 0.85, 0.55, 1],
+  [0.98, 0.83, 0.36, 1],
+  [0.95, 0.55, 0.28, 1],
+  [0.86, 0.25, 0.25, 1],
 ];
+
+const QUANTILES = [0, 0.25, 0.5, 0.75, 1];
+
+/**
+ * Quantile stops derived from the actual waiting-TEU values.
+ *
+ * The previous fixed 0..2600 ramp advertised a range three times wider than
+ * the data (the busiest port peaks around 750 TEU), so every port sat in the
+ * blue-green end and the legend lied about the domain. Quantiles use the whole
+ * ramp and keep the legend honest for whatever dataset is loaded.
+ */
+export function portWaitingStops(values: number[]): ColorStop[] {
+  const sorted = values
+    .filter((value) => Number.isFinite(value) && value >= 0)
+    .sort((a, b) => a - b);
+
+  if (sorted.length === 0) {
+    return QUANTILES.map(
+      (quantile, index) => [quantile, WAITING_COLORS[index]] as ColorStop,
+    );
+  }
+
+  const picked = QUANTILES.map((quantile) => {
+    const index = Math.min(
+      sorted.length - 1,
+      Math.round(quantile * (sorted.length - 1)),
+    );
+    return sorted[index];
+  });
+
+  // Quantiles can repeat when many ports share a value; keep the stops strictly
+  // increasing so the interpolation never divides by zero.
+  const stops: ColorStop[] = [];
+  for (let i = 0; i < picked.length; i += 1) {
+    let value = picked[i];
+    if (i > 0 && value <= stops[i - 1][0]) {
+      value = stops[i - 1][0] + 0.5;
+    }
+    stops.push([value, WAITING_COLORS[i]]);
+  }
+  return stops;
+}
 
 export const VESSEL_STATE_RGBA: Record<string, RGBA> = {
   sailing: [0.35, 0.85, 0.95, 1],
@@ -20,24 +63,28 @@ export const VESSEL_STATE_RGBA: Record<string, RGBA> = {
   idle: [0.62, 0.66, 0.72, 1],
 };
 
-export function portWaitingColor(totalTeu: number): RGBA {
-  return interpolate(PORT_WAITING_STOPS, totalTeu);
+const DEFAULT_WAITING_STOPS = portWaitingStops([]);
+
+export function portWaitingColor(
+  totalTeu: number,
+  stops: ColorStop[] = DEFAULT_WAITING_STOPS,
+): RGBA {
+  return interpolate(stops, totalTeu);
 }
+
+const UTILIZATION_STOPS: ColorStop[] = [
+  [0, [0.35, 0.45, 0.62, 1]],
+  [0.25, [0.35, 0.85, 0.55, 1]],
+  [0.5, [0.98, 0.83, 0.36, 1]],
+  [0.75, [0.95, 0.55, 0.28, 1]],
+  [1, [0.86, 0.25, 0.25, 1]],
+];
 
 export function utilizationColor(utilization: number): RGBA {
-  return interpolate(
-    [
-      [0, [0.35, 0.45, 0.62, 1]],
-      [0.25, [0.35, 0.85, 0.55, 1]],
-      [0.5, [0.98, 0.83, 0.36, 1]],
-      [0.75, [0.95, 0.55, 0.28, 1]],
-      [1, [0.86, 0.25, 0.25, 1]],
-    ],
-    utilization,
-  );
+  return interpolate(UTILIZATION_STOPS, utilization);
 }
 
-function interpolate(stops: Array<[number, RGBA]>, value: number): RGBA {
+function interpolate(stops: ColorStop[], value: number): RGBA {
   if (value <= stops[0][0]) return stops[0][1];
   const last = stops[stops.length - 1];
   if (value >= last[0]) return last[1];
@@ -62,5 +109,3 @@ export function toCss([r, g, b, a]: RGBA): string {
   const to255 = (v: number) => Math.round(Math.min(1, Math.max(0, v)) * 255);
   return `rgba(${to255(r)}, ${to255(g)}, ${to255(b)}, ${a})`;
 }
-
-export const LEGEND_PORT_WAITING = PORT_WAITING_STOPS;

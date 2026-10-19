@@ -16,7 +16,7 @@ import {
   type Viewer,
 } from 'cesium';
 import type { SceneModel } from '../../viewmodel/sceneModel';
-import { portWaitingColor, toCss } from '../../viewmodel/colorScales';
+import { portWaitingStops, portWaitingColor, type ColorStop } from '../../viewmodel/colorScales';
 import { waitingTeuByPort } from '../../viewmodel/sceneModel';
 import type { PickPayload, SceneLayer } from './SceneLayer';
 
@@ -28,27 +28,35 @@ export class PortLayer implements SceneLayer {
   private labels: LabelCollection | null = null;
   private visible = true;
   private highlighted = new Set<string>();
-  private payloads: PickPayload[] = [];
+  /** Base pixel size per port, so highlight() can restore it exactly. */
+  private baseSizes = new Map<string, number>();
+  private stops: ColorStop[] = [];
 
   build(model: SceneModel, viewer: Viewer): void {
     this.points = viewer.scene.primitives.add(new PointPrimitiveCollection());
     this.labels = viewer.scene.primitives.add(new LabelCollection());
 
+    // Derive the ramp from the loaded data instead of a fixed 0..2600 domain:
+    // the busiest port in the current run waits ~750 TEU, so a fixed wide ramp
+    // would leave most of the colour range unused and the legend misleading.
+    this.stops = portWaitingStops(
+      model.ports.map((port) => waitingTeuByPort(model, port.id)),
+    );
+
     for (const port of model.ports) {
       const waitingTeu = waitingTeuByPort(model, port.id);
-      const [r, g, b, a] = portWaitingColor(waitingTeu);
+      const [r, g, b, a] = portWaitingColor(waitingTeu, this.stops);
       const payload: PickPayload = { kind: 'port', id: port.id, label: port.name };
-      this.payloads.push(payload);
+      const baseSize = port.coordsVerified ? 12 : 9;
+      this.baseSizes.set(port.id, baseSize);
 
       this.points.add({
         position: Cartesian3.fromDegrees(port.lon, port.lat, 0),
         color: new Color(r, g, b, a),
-        pixelSize: port.coordsVerified ? 12 : 9,
+        pixelSize: baseSize,
         outlineColor: Color.fromCssColorString('#ffffff'),
         outlineWidth: 1.5,
         id: payload,
-        // Hide names when zoomed far out to avoid a wall of text.
-        distanceDisplayCondition: undefined,
       });
 
       this.labels.add({
@@ -85,7 +93,9 @@ export class PortLayer implements SceneLayer {
       const primitive = this.points.get(i);
       const payload = primitive.id as PickPayload | undefined;
       const active = payload ? this.highlighted.has(payload.id) : false;
-      primitive.pixelSize = active ? 20 : payload?.kind === 'port' ? 12 : 12;
+      primitive.pixelSize = active
+        ? 20
+        : (payload && this.baseSizes.get(payload.id)) ?? 12;
       primitive.outlineWidth = active ? 3 : 1.5;
       primitive.outlineColor = active
         ? Color.fromCssColorString('#ffd166')
@@ -96,10 +106,6 @@ export class PortLayer implements SceneLayer {
   dispose(): void {
     this.points = null;
     this.labels = null;
-  }
-
-  /** Exposed for the legend swatch colours in the 2D panel. */
-  static legendColors(): string[] {
-    return [0, 400, 900, 1600, 2600].map((value) => toCss(portWaitingColor(value)));
+    this.baseSizes.clear();
   }
 }

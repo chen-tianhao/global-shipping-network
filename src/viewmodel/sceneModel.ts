@@ -7,6 +7,7 @@ import type {
   DisruptionVM,
   NetworkGraph,
   PortVM,
+  RouteSegmentVM,
   RouteVM,
   SimDay,
   StatBundle,
@@ -49,6 +50,67 @@ export function portById(model: SceneModel, id: string): PortVM | undefined {
 
 export function routeById(model: SceneModel, id: string): RouteVM | undefined {
   return model.routes.find((route) => route.id === id);
+}
+
+/**
+ * Route legs that connect the two ports in the requested direction.
+ *
+ * Disruptions are directional (`departure -> arrival` in
+ * `disruption_scenario.py`), so the exact direction wins. Only when no
+ * forward leg exists fall back to the reverse one - otherwise a
+ * Shanghai -> Shenzhen delay would also paint the Shenzhen -> Shanghai leg.
+ */
+export function segmentsBetween(
+  model: SceneModel,
+  fromPortId: string,
+  toPortId: string,
+): RouteSegmentVM[] {
+  const forward: RouteSegmentVM[] = [];
+  const reverse: RouteSegmentVM[] = [];
+
+  for (const route of model.routes) {
+    for (const segment of route.segments) {
+      if (segment.fromPortId === fromPortId && segment.toPortId === toPortId) {
+        forward.push(segment);
+      } else if (
+        segment.fromPortId === toPortId &&
+        segment.toPortId === fromPortId
+      ) {
+        reverse.push(segment);
+      }
+    }
+  }
+
+  return forward.length > 0 ? forward : reverse;
+}
+
+/**
+ * Geometry to frame for a disruption: the port itself for a closure, the real
+ * sea-route leg for congestion. Falls back to the two port anchors when the
+ * build did not emit per-leg geometry.
+ */
+export function disruptionPath(
+  model: SceneModel,
+  disruption: DisruptionVM,
+): Array<[number, number]> {
+  if (disruption.type === 'closed_port') {
+    const port = portById(model, String(disruption.target));
+    return port ? [[port.lon, port.lat]] : [];
+  }
+
+  const [fromId, toId] = disruption.target as [string, string];
+  const segments = segmentsBetween(model, fromId, toId);
+  if (segments.length > 0) {
+    return segments[0].waypoints.map(([lon, lat]) => [lon, lat]);
+  }
+
+  const from = portById(model, fromId);
+  const to = portById(model, toId);
+  if (!from || !to) return [];
+  return [
+    [from.lon, from.lat],
+    [to.lon, to.lat],
+  ];
 }
 
 export function waitingTeuByPort(model: SceneModel, portId: string): number {

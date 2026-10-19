@@ -16,11 +16,11 @@ import type {
   DisruptionVM,
   Matrix2D,
   NetworkGraph,
-  PortVM,
   RouteVM,
   StatBundle,
   VesselState,
 } from '../types';
+import { mapPorts, mapSegments, slug } from './shared';
 
 interface PortsFile {
   ports: Array<Record<string, unknown>>;
@@ -58,16 +58,7 @@ export class StaticDataProvider implements SimulationDataProvider {
       vesselsByRoute.set(row[0], toNumber(row[2]) || 0);
     }
 
-    const ports: PortVM[] = portsFile.ports.map((raw) => ({
-      id: String(raw.id ?? ''),
-      name: String(raw.name ?? ''),
-      lon: Number(raw.lon),
-      lat: Number(raw.lat),
-      berthCount: Number(raw.berthCount ?? 0),
-      coordsVerified: Boolean(raw.coordsVerified),
-      note: raw.note ? String(raw.note) : undefined,
-      tunnelledToSea: Boolean(raw.tunnelledToSea),
-    }));
+    const ports = mapPorts(portsFile.ports);
 
     const routes: RouteVM[] = routesFile.routes.map((raw) => {
       const waypoints = (raw.waypoints as Array<[number, number]>) ?? [];
@@ -77,6 +68,7 @@ export class StaticDataProvider implements SimulationDataProvider {
         name: String(raw.name ?? id),
         startDayOfWeek: raw.startDayOfWeek === null ? null : Number(raw.startDayOfWeek),
         waypoints,
+        segments: mapSegments(raw.segments, ports),
         isAlternative: Boolean(raw.isAlternative),
         totalDistanceNm: Number(raw.totalDistanceNm ?? 0),
         vessels: vesselsByRoute.get(id.replace(/-ALT.*$/, '')) ?? 0,
@@ -224,11 +216,4 @@ function readMatrix(text: string): Matrix2D {
     values.push(row.slice(1).map((cell) => toNumber(cell) || 0));
   }
   return { rows: rows.map(slug), cols: cols.map(slug), values };
-}
-
-function slug(name: string): string {
-  return name
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-');
 }
