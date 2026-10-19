@@ -211,6 +211,21 @@ npm run smoke "http://127.0.0.1:4173/?provider=real"
         └── states.csv
 ```
 
+**Cloudflare Pages 配置（当前部署方式）**
+
+| 配置项 | 值 |
+| --- | --- |
+| Root directory | `wsc-3d` |
+| Build command | `npm ci && npm run build` |
+| Build output directory | `dist` |
+| 环境变量 | `NODE_VERSION=22.12.0`（仓库已带 `.nvmrc`，一般不用再填） |
+
+三个必须记住的点：
+
+1. **不要把 `dist/` 的内容拷回仓库根再提交。** 仓库根的 `index.html` 必须是 Vite 源入口（引 `/src/main.ts`）。拷回来之后，`vite build` 会把上一次的产物当成源码入口再打一次包，于是源码改动永远不生效、`assets/` 和 `cesium/` 还会被重复提交几十 MB。
+2. **`public/data` 下的生成物必须入库**（`.gitignore` 已放行）。Pages 的构建机没有 `WSC_SimulationChallenge_2026` 的仿真输出，也没预装 numpy，跑不了 `build:geo` / `build:data`；不入库就必然出现 `/data/ports.json` 404。
+3. 构建末尾的 `check:dist` 会在缺文件时直接失败，Pages 的构建日志里能一眼看到缺哪一项、该跑哪个命令。
+
 **路径解析规则**
 
 - `dataBaseUrl` 默认是 `data`，**相对当前页面 URL** 解析。站点是 `https://host/ship/` → 请求 `https://host/ship/data/...`。

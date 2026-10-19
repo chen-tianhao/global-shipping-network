@@ -1,0 +1,12 @@
+# Cloudflare Pages headers.
+#
+# Vite emits content-hashed files under /assets, so they can be cached hard.
+# Everything under /data keeps the same filename across deploys, so a long
+# max-age would pin an old dataset in visitors' browsers; five minutes is
+# enough to keep repeat visits cheap while letting a redeploy land quickly.
+
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/data/*
+  Cache-Control: public, max-age=300

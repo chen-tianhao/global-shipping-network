@@ -1,20 +1,27 @@
 # ===================== wsc-3d 项目 .gitignore =====================
-# 本仓库已 git init，但尚未有提交。以下规则界定“源码 / 配置 / 真实源数据”
-# 纳入版本控制，而“依赖、构建产物、脚本生成物、运行与测试临时产物”一律忽略。
-#
 # 设计原则：
-#   - 入库：源代码、配置、用户提供的真实港口/航线/船型 CSV、Natural Earth 源矢量。
-#   - 忽略：node_modules、dist、.npm-cache、日志、冒烟截图，以及由
-#           `npm run build:geo` / `build:coastline` 重新生成的 public/data/*.json。
-#   这样首次克隆后只需 `npm install` + `npm run build:geo` 即可重建全部运行数据。
+#   - 入库：源代码、配置、CSV 源数据、Natural Earth 源矢量，以及
+#           **public/data 下的生成物**（原因见下方“部署例外”）。
+#   - 忽略：node_modules、dist、.npm-cache、日志、冒烟截图。
+#
+# 部署例外：本项目用 Cloudflare Pages 从 GitHub 直接构建，构建机拿不到
+# ../WSC_SimulationChallenge_2026 的仿真输出，也没有预装 numpy，因此
+# public/data 下的 json / 贴图 / stats / trajectory 必须在仓库里，
+# 否则线上会因为 /data/ports.json 404 而拿到 index.html（报
+# "Unexpected token '<'"）。详见 VERIFY.md 第七节。
 
 # ---- 依赖 ----
 node_modules/
 
 # ---- 构建产物 ----
 dist/
+.tmp-build*/
 *.tsbuildinfo
 vite.config.ts.timestamp-*
+# 如果不小心把 dist 的内容拷回了根目录，不要让它进仓库：
+# 根目录的 index.html 必须是 Vite 源入口（引 /src/main.ts）。
+/assets/
+/cesium/
 
 # ---- 包管理器本地缓存（npm install 用 --cache ./.npm-cache 落盘）----
 .npm-cache/
@@ -26,12 +33,11 @@ preview.log
 smoke-*.png
 .verify-motion/
 
-# ---- 脚本生成物（由 npm run build:geo / build:coastline 重新生成，无需入库）----
-# 注意：保留同目录下的 *.csv（真实源数据）。
-public/data/*.json
-public/data/landmask.png
-public/data/stats/
-public/data/trajectory/
+# ---- 脚本生成物 ----
+# 曾经忽略 public/data/*.json、landmask.png、stats/、trajectory/。现在必须入库：
+# Cloudflare Pages 的构建机没有仿真输出，无法在 CI 里重跑 build:data。
+# 数据体积约 3 MB，可以接受。
+# 只有 Natural Earth 源矢量保留在 data/ 作为构建输入（build:coast / build:mask）。
 
 # ---- 环境变量（后续接入底图密钥等，勿入库；可保留 .env.example 作为模板）----
 .env
