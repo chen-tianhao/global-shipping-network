@@ -1,0 +1,44 @@
+# ===================== wsc-3d 项目 .gitignore =====================
+# 本仓库已 git init，但尚未有提交。以下规则界定“源码 / 配置 / 真实源数据”
+# 纳入版本控制，而“依赖、构建产物、脚本生成物、运行与测试临时产物”一律忽略。
+#
+# 设计原则：
+#   - 入库：源代码、配置、用户提供的真实港口/航线/船型 CSV、Natural Earth 源矢量。
+#   - 忽略：node_modules、dist、.npm-cache、日志、冒烟截图，以及由
+#           `npm run build:geo` / `build:coastline` 重新生成的 public/data/*.json。
+#   这样首次克隆后只需 `npm install` + `npm run build:geo` 即可重建全部运行数据。
+
+# ---- 依赖 ----
+node_modules/
+
+# ---- 构建产物 ----
+dist/
+*.tsbuildinfo
+vite.config.ts.timestamp-*
+
+# ---- 包管理器本地缓存（npm install 用 --cache ./.npm-cache 落盘）----
+.npm-cache/
+
+# ---- 日志与运行/测试临时产物 ----
+*.log
+build.log
+preview.log
+smoke-screenshot.png
+
+# ---- 脚本生成物（由 npm run build:geo / build:coastline 重新生成，无需入库）----
+# 注意：保留同目录下的 *.csv（真实源数据）。
+public/data/*.json
+public/data/stats/
+
+# ---- 环境变量（后续接入底图密钥等，勿入库；可保留 .env.example 作为模板）----
+.env
+.env.*
+!.env.example
+
+# ---- 编辑器 / 操作系统 ----
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db

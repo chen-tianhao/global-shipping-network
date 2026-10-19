@@ -1,0 +1,23 @@
+{
+  "name": "wsc-3d",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "CesiumJS 3D visualization for the WSC Simulation Challenge 2026 maritime network",
+  "scripts": {
+    "dev": "vite",
+    "build": "node scripts/clean-dist.mjs && tsc --noEmit && vite build",
+    "preview": "vite preview --port 4173",
+    "typecheck": "tsc --noEmit",
+    "smoke": "node scripts/smoke.mjs",
+    "build:geo": "python scripts/build_geo.py --input ../WSC_SimulationChallenge_2026/SimulationChallenge2026_Py/Input",
+    "verify:geo": "python scripts/verify_geo.py"
+  },
+  "dependencies": {
+    "@types/node": "^26.6.5",
+    "cesium": "^1.146.0",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.4",
+    "vite-plugin-cesium": "^1.2.23"
+  }
+}

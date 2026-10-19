@@ -1,0 +1,158 @@
+/**
+ * Head-up display: status line, legend, layer toggles and selection details.
+ *
+ * Plain DOM on purpose - the panel content is small and changes rarely, so a
+ * framework would add a virtual DOM competing with the WebGL loop for no
+ * benefit. See the technical plan for the full reasoning.
+ */
+
+import { el, keyValue, panel, row, swatch } from './dom';
+import { toCss, VESSEL_STATE_RGBA } from '../viewmodel/colorScales';
+import { LEGEND_PORT_WAITING } from '../viewmodel/colorScales';
+import { waitingTeuByPort } from '../viewmodel/sceneModel';
+import type { SceneModel } from '../viewmodel/sceneModel';
+import type { PickPayload } from '../cesium/layers/SceneLayer';
+import type { SceneLayer } from '../cesium/layers/SceneLayer';
+
+export interface HudOptions {
+  baseLayerLabel: string;
+  isPlaceholderMotion: boolean;
+  onToggleLayer(id: string, visible: boolean): void;
+}
+
+export interface Hud {
+  setSelected(payload: PickPayload | null): void;
+}
+
+export function createHud(
+  root: HTMLElement,
+  model: SceneModel,
+  layers: SceneLayer[],
+  options: HudOptions,
+): Hud {
+  root.innerHTML = '';
+
+  // ---- status strip -------------------------------------------------------
+  const status = el('header', 'hud hud--top');
+  status.append(el('h1', 'hud__title', '全球集装箱航运网络 · 3D 沙盘'));
+  status.append(
+    el('p', 'hud__subtitle', `底图：${options.baseLayerLabel}`),
+  );
+  if (options.isPlaceholderMotion) {
+    const warn = el('p', 'hud__warn');
+    warn.textContent =
+      '船舶运动为占位数据：等速沿航线巡航，不含排队、靠泊与扰动响应，不能读作仿真结果。';
+    status.append(warn);
+  }
+  root.append(status);
+
+  // ---- legend + toggles ---------------------------------------------------
+  const left = el('aside', 'hud hud--left');
+
+  const portLegend = el('div', 'legend');
+  portLegend.append(el('h3', 'legend__title', '港口 · 等待 TEU'));
+  for (const [value, color] of LEGEND_PORT_WAITING) {
+    portLegend.append(row(swatch(toCss(color)), String(value)));
+  }
+
+  const vesselLegend = el('div', 'legend');
+  vesselLegend.append(el('h3', 'legend__title', '船舶 · 状态'));
+  const stateLabels: Record<string, string> = {
+    sailing: '航行中',
+    queuing: '锚地等待',
+    served: '在泊作业',
+    idle: '闲置',
+  };
+  for (const [state, color] of Object.entries(VESSEL_STATE_RGBA)) {
+    vesselLegend.append(row(swatch(toCss(color)), stateLabels[state] ?? state));
+  }
+
+  left.append(panel('图例', portLegend, vesselLegend));
+
+  const toggles = el('div', 'toggles');
+  for (const layer of layers) {
+    const label = el('label', 'toggle');
+    const input = el('input');
+    input.type = 'checkbox';
+    input.checked = layer.isVisible();
+    input.addEventListener('change', () => {
+      options.onToggleLayer(layer.id, input.checked);
+    });
+    label.append(input, el('span', undefined, layer.label));
+    toggles.append(label);
+  }
+  left.append(panel('图层', toggles));
+  root.append(left);
+
+  // ---- selection details --------------------------------------------------
+  const right = el('aside', 'hud hud--right');
+  const details = el('div', 'details');
+  details.append(el('p', 'details__empty', '点击地球上的港口、航线或船舶查看详情。'));
+  right.append(panel('详情', details));
+  root.append(right);
+
+  function setSelected(payload: PickPayload | null): void {
+    details.innerHTML = '';
+    if (!payload) {
+      details.append(
+        el('p', 'details__empty', '点击地球上的港口、航线或船舶查看详情。'),
+      );
+      return;
+    }
+
+    details.append(el('h3', 'details__title', payload.label));
+
+    if (payload.kind === 'port') {
+      const port = model.ports.find((item) => item.id === payload.id);
+      if (!port) return;
+      const waiting = waitingTeuByPort(model, port.id);
+      details.append(
+        keyValue([
+          ['泊位数', `${port.berthCount}`],
+          ['经纬度', `${port.lon.toFixed(2)}, ${port.lat.toFixed(2)}`],
+          ['等待 TEU', waiting.toLocaleString('zh-CN')],
+          ['坐标来源', port.coordsVerified ? '公开资料核对' : '未核对'],
+          ...(port.tunnelledToSea ? ([['入海处理', '已开凿通道']] as Array<[string, string]>) : []),
+        ]),
+      );
+      if (port.note) details.append(el('p', 'details__note', port.note));
+      return;
+    }
+
+    if (payload.kind === 'route') {
+      const route = model.routes.find((item) => item.id === payload.id);
+      if (route) {
+        const utilization = model.stats?.routeUtilization.find(
+          (item) => item.routeId === route.id,
+        );
+        details.append(
+          keyValue([
+            ['航线', route.name],
+            ['挂靠航段', `${route.waypoints.length} 个路径点`],
+            ['航线里程', `${Math.round(route.totalDistanceNm).toLocaleString('zh-CN')} nm`],
+            ['配船数', `${route.vessels ?? 0}`],
+            [
+              '舱位利用率',
+              utilization ? `${(utilization.utilization * 100).toFixed(2)}%` : '—',
+            ],
+          ]),
+        );
+        return;
+      }
+      // Congested-leg payloads carry a synthetic "from--to" id.
+      details.append(el('p', 'details__note', '航段级扰动事件'));
+      return;
+    }
+
+    const vessel = model.motion?.vessels.find((item) => item.vesselId === payload.id);
+    if (!vessel) return;
+    details.append(
+      keyValue([
+        ['所属航线', vessel.routeId ?? '—'],
+        ['采样点', `${vessel.lon.length}`],
+      ]),
+    );
+  }
+
+  return { setSelected };
+}
