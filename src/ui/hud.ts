@@ -13,14 +13,24 @@ import {
   VESSEL_STATE_RGBA,
 } from '../viewmodel/colorScales';
 import { waitingTeuByPort } from '../viewmodel/sceneModel';
+import {
+  CAMERA_PRESET_ORDER,
+  CAMERA_PRESETS,
+  type CameraPreset,
+} from '../viewmodel/cameraPresets';
 import type { SceneModel } from '../viewmodel/sceneModel';
-import type { PickPayload } from '../cesium/layers/SceneLayer';
+import type { PickPayload } from '../data/types';
 import type { SceneLayer } from '../cesium/layers/SceneLayer';
 
 export interface HudOptions {
   baseLayerLabel: string;
   isPlaceholderMotion: boolean;
+  motionLabel: string;
+  showWarmUp: boolean;
+  warmUpDays: number;
   onToggleLayer(id: string, visible: boolean): void;
+  onWarmUpChange(show: boolean): void;
+  onPreset(preset: CameraPreset): void;
 }
 
 export interface Hud {
@@ -39,7 +49,11 @@ export function createHud(
   const status = el('header', 'hud hud--top');
   status.append(el('h1', 'hud__title', '全球集装箱航运网络 · 3D 沙盘'));
   status.append(
-    el('p', 'hud__subtitle', `底图：${options.baseLayerLabel}`),
+    el(
+      'p',
+      'hud__subtitle',
+      `底图：${options.baseLayerLabel} · 运动：${options.motionLabel}`,
+    ),
   );
   if (options.isPlaceholderMotion) {
     const warn = el('p', 'hud__warn');
@@ -90,12 +104,46 @@ export function createHud(
     toggles.append(label);
   }
   left.append(panel('图层', toggles));
+
+  const presets = el('div', 'preset-grid');
+  for (const preset of CAMERA_PRESET_ORDER) {
+    const button = el(
+      'button',
+      'preset-button',
+      CAMERA_PRESETS[preset].label,
+    );
+    button.type = 'button';
+    button.addEventListener('click', () => options.onPreset(preset));
+    presets.append(button);
+  }
+  left.append(panel('视角', presets));
+
+  const timeRange = el('div', 'toggles');
+  const warmUpLabel = el('label', 'toggle');
+  const warmUpInput = el('input');
+  warmUpInput.type = 'checkbox';
+  warmUpInput.className = 'warmup-toggle';
+  warmUpInput.checked = options.showWarmUp;
+  warmUpInput.addEventListener('change', () => {
+    options.onWarmUpChange(warmUpInput.checked);
+  });
+  warmUpLabel.append(
+    warmUpInput,
+    el(
+      'span',
+      undefined,
+      `含预热期（${options.warmUpDays} 天）`,
+    ),
+  );
+  timeRange.append(warmUpLabel);
+  left.append(panel('时间范围', timeRange));
+
   root.append(left);
 
   // ---- selection details --------------------------------------------------
   const right = el('aside', 'hud hud--right');
   const details = el('div', 'details');
-  details.append(el('p', 'details__empty', '点击地球上的港口、航线或船舶查看详情。'));
+  details.append(el('p', 'details__empty', '点击地球上的港口、航线、船舶或扰动事件查看详情。'));
   right.append(panel('详情', details));
   root.append(right);
 
@@ -139,6 +187,14 @@ export function createHud(
             ['挂靠航段', `${route.waypoints.length} 个路径点`],
             ['航线里程', `${Math.round(route.totalDistanceNm).toLocaleString('zh-CN')} nm`],
             ['配船数', `${route.vessels ?? 0}`],
+            [
+              '平均舱位',
+              route.capacityTeu || utilization
+                ? `${Math.round(
+                    route.capacityTeu ?? utilization?.capacityTeu ?? 0,
+                  ).toLocaleString('zh-CN')} TEU`
+                : '—',
+            ],
             [
               '舱位利用率',
               utilization ? `${(utilization.utilization * 100).toFixed(2)}%` : '—',

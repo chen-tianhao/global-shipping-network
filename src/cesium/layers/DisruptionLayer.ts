@@ -56,7 +56,7 @@ export class DisruptionLayer implements SceneLayer {
   private items: Item[] = [];
   private visible = true;
   private highlighted = new Set<string>();
-  private lastActiveKey = '';
+  private lastActiveDay = Number.NaN;
 
   build(model: SceneModel, viewer: Viewer): void {
     this.lines = viewer.scene.primitives.add(new PolylineCollection());
@@ -172,9 +172,10 @@ export class DisruptionLayer implements SceneLayer {
     if (!this.visible) return;
 
     // Cheap guard: recompute only when the active set could have changed.
-    const key = `${Math.floor(now)}`;
-    if (key === this.lastActiveKey) return;
-    this.lastActiveKey = key;
+    // Kept numeric (no template string) so a rendered frame allocates nothing.
+    const activeDay = Math.floor(now);
+    if (activeDay === this.lastActiveDay) return;
+    this.lastActiveDay = activeDay;
 
     for (const item of this.items) {
       const active =
@@ -190,7 +191,7 @@ export class DisruptionLayer implements SceneLayer {
     if (this.points) this.points.show = visible;
     if (this.lines) this.lines.show = visible;
     if (this.labels) this.labels.show = visible;
-    if (visible) this.lastActiveKey = '';
+    if (visible) this.lastActiveDay = Number.NaN;
   }
 
   isVisible(): boolean {

@@ -65,13 +65,23 @@ export async function createViewer(options: CreateViewerOptions): Promise<Viewer
     infoBox: false,
     selectionIndicator: false,
     requestRenderMode: true,
-    maximumRenderTimeChange: 0.05,
-    contextOptions: { webgl: { preserveDrawingBuffer: true } },
+    // Infinity means "clock advancing is not, by itself, a reason to draw".
+    // The render loop requests a frame only when the simulated day actually
+    // changed (see `bootstrap`), so a paused scene drops to 0 fps instead of
+    // silently redrawing every frame. The old 0.05 s value guaranteed a redraw
+    // on every frame at any useful playback speed, making the mode a no-op.
+    maximumRenderTimeChange: Number.POSITIVE_INFINITY,
+    // Only needed for `canvas.toDataURL()` / readPixels-style captures. The
+    // smoke test screenshots through the browser compositor, so keeping it on
+    // bought nothing and cost an extra buffer copy per frame.
+    contextOptions: { webgl: { preserveDrawingBuffer: false } },
   });
 
-  // Trim Cesium's default credit/logo chrome.
+  // Credits: keep the container intact but collapse it when there is nothing
+  // to attribute. With the built-in `none` base map that is the case; as soon
+  // as a tile provider is plugged in, its attribution must be visible.
   const credit = viewer.cesiumWidget.creditContainer as HTMLElement | undefined;
-  if (credit) credit.style.display = 'none';
+  if (credit) credit.style.display = imagery ? '' : 'none';
 
   viewer.scene.globe.baseColor = Color.fromCssColorString('#0b1a2b');
   viewer.scene.globe.showGroundAtmosphere = false;
@@ -104,9 +114,41 @@ export async function createViewer(options: CreateViewerOptions): Promise<Viewer
 
   viewer.scene.globe.depthTestAgainstTerrain = false;
 
+  // Keep the camera out of the ground and inside a useful global range. The
+  // default Cesium limits allow both "inside the earth" and absurdly far views.
+  const controller = viewer.scene.screenSpaceCameraController;
+  controller.minimumZoomDistance = 1.0e5;
+  controller.maximumZoomDistance = 4.0e7;
+
+  installContextLossNotice(container, viewer);
+
   return {
     viewer,
     baseLayerId: provider.id,
     baseLayerActive: imagery !== null,
   };
+}
+
+/**
+ * A lost WebGL context otherwise fails silently: every draw call is dropped and
+ * the canvas stays black with no explanation. The browser only restores the
+ * context if `webglcontextlost` is cancelled, so cancel it and tell the user
+ * what is happening until `webglcontextrestored` arrives.
+ */
+function installContextLossNotice(container: HTMLElement, viewer: Viewer): void {
+  const notice = document.createElement('div');
+  notice.className = 'gl-lost';
+  notice.textContent = '渲染上下文丢失，正在尝试恢复 …';
+  notice.hidden = true;
+  container.appendChild(notice);
+
+  const canvas = viewer.scene.canvas;
+  canvas.addEventListener('webglcontextlost', (event) => {
+    event.preventDefault();
+    notice.hidden = false;
+  });
+  canvas.addEventListener('webglcontextrestored', () => {
+    notice.hidden = true;
+    viewer.scene.requestRender();
+  });
 }

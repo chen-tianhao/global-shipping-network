@@ -11,6 +11,7 @@ import {
 } from 'cesium';
 import type { PortVM, RouteVM } from '../data/types';
 import { normalizeLon, shortestLongitudeSpan } from '../data/geo/geoMath';
+import { CAMERA_PRESETS, type CameraPreset } from '../viewmodel/cameraPresets';
 
 const DEFAULT_PADDING = 0.12;
 
@@ -44,6 +45,20 @@ export function flyToPoints(
   const rectangle = boundsOf(points);
   if (!rectangle) return;
   viewer.camera.flyTo({ destination: rectangle, duration: 0.8 });
+}
+
+/** Named regional presets from the HUD. */
+export function flyToPreset(viewer: Viewer, preset: CameraPreset): void {
+  const definition = CAMERA_PRESETS[preset];
+  viewer.camera.flyTo({
+    destination: Rectangle.fromDegrees(
+      definition.west,
+      definition.south,
+      definition.east,
+      definition.north,
+    ),
+    duration: 1.2,
+  });
 }
 
 /** Keep the camera put but centre a moving vessel. */

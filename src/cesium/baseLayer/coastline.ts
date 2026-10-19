@@ -2,12 +2,11 @@
  * Continent outlines for the `none` base map.
  *
  * Without imagery the globe is an unreadable sphere, so the bare-globe mode
- * draws simplified coastlines from a local asset. This lives under `baseLayer/`
- * on purpose: it is part of "what the globe looks like", not part of the
- * simulation data, so it is not exposed through `SimulationDataProvider`.
+ * draws simplified coastlines. This lives under `baseLayer/` on purpose: it is
+ * part of "what the globe looks like", not part of the simulation data.
  *
- * The asset is optional - if it is missing the app still runs, just without
- * continents.
+ * Loading happens in `src/data/loaders/coastlineLoader.ts`; this layer only
+ * receives the rings, which keeps `cesium/` free of file access.
  */
 
 import {
@@ -18,13 +17,9 @@ import {
   PolylineCollection,
   type Viewer,
 } from 'cesium';
-import { fetchJson } from '../../data/provider';
+import type { CoastlineRings } from '../../data/loaders/coastlineLoader';
 import type { SceneModel } from '../../viewmodel/sceneModel';
 import type { SceneLayer } from '../layers/SceneLayer';
-
-interface CoastlineFile {
-  lines: Array<Array<[number, number]>>;
-}
 
 const COAST_COLOR = Color.fromCssColorString('#2f6f8f').withAlpha(0.9);
 
@@ -35,21 +30,7 @@ export class CoastlineLayer implements SceneLayer {
   private collection: PolylineCollection | null = null;
   private visible = true;
 
-  constructor(private readonly lines: Array<Array<[number, number]>>) {}
-
-  /** Returns null when the asset is unavailable - callers must tolerate that. */
-  static async load(baseUrl: string): Promise<CoastlineLayer | null> {
-    try {
-      const file = await fetchJson<CoastlineFile>(
-        `${baseUrl.replace(/\/$/, '')}/coastline.json`,
-      );
-      if (!Array.isArray(file.lines) || file.lines.length === 0) return null;
-      return new CoastlineLayer(file.lines);
-    } catch (error) {
-      console.warn('[coastline] asset unavailable, globe will be blank:', error);
-      return null;
-    }
-  }
+  constructor(private readonly lines: CoastlineRings) {}
 
   build(_model: SceneModel, viewer: Viewer): void {
     this.collection = viewer.scene.primitives.add(new PolylineCollection());

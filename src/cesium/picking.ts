@@ -19,7 +19,9 @@ import type { PickPayload } from './layers/SceneLayer';
 
 export interface PickHandlers {
   onPick(payload: PickPayload | null): void;
-  onHover?(payload: PickPayload | null): void;
+  /** Double click is the "fly to" gesture; single click only selects. */
+  onDoublePick?(payload: PickPayload | null): void;
+  onHover?(payload: PickPayload | null, position: Cartesian2): void;
 }
 
 export function installPicking(viewer: Viewer, handlers: PickHandlers): () => void {
@@ -29,11 +31,24 @@ export function installPicking(viewer: Viewer, handlers: PickHandlers): () => vo
     handlers.onPick(pickAt(viewer, event.position));
   }, ScreenSpaceEventType.LEFT_CLICK);
 
+  if (handlers.onDoublePick) {
+    const onDoublePick = handlers.onDoublePick;
+    handler.setInputAction((event: { position: Cartesian2 }) => {
+      onDoublePick(pickAt(viewer, event.position));
+    }, ScreenSpaceEventType.LEFT_DOUBLE_CLICK);
+  }
+
   if (handlers.onHover) {
     const hover = handlers.onHover;
+    let lastHoverAt = 0;
     handler.setInputAction((event: { endPosition: Cartesian2 }) => {
+      // Picking is a GPU read-back; throttle before it, not after.
+      const now = performance.now();
+      if (now - lastHoverAt < 100) return;
+      lastHoverAt = now;
+
       const payload = pickAt(viewer, event.endPosition);
-      hover(payload);
+      hover(payload, event.endPosition);
       viewer.scene.canvas.style.cursor = payload ? 'pointer' : 'default';
     }, ScreenSpaceEventType.MOUSE_MOVE);
   }

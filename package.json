@@ -6,12 +6,14 @@
   "description": "CesiumJS 3D visualization for the WSC Simulation Challenge 2026 maritime network",
   "scripts": {
     "dev": "vite",
-    "build": "node scripts/clean-dist.mjs && tsc --noEmit && vite build",
+    "build": "node scripts/clean-dist.mjs && node scripts/check-boundaries.mjs && tsc --noEmit && vite build",
     "preview": "vite preview --port 4173",
     "typecheck": "tsc --noEmit",
+    "check:boundaries": "node scripts/check-boundaries.mjs",
+    "build:data": "node scripts/build-data.mjs",
     "smoke": "node scripts/smoke.mjs",
-    "build:geo": "python scripts/build_geo.py --input ../WSC_SimulationChallenge_2026/SimulationChallenge2026_Py/Input",
-    "verify:geo": "python scripts/verify_geo.py",
+    "build:geo": "node scripts/run-python.mjs scripts/build_geo.py --input ../WSC_SimulationChallenge_2026/SimulationChallenge2026_Py/Input",
+    "verify:geo": "node scripts/run-python.mjs scripts/verify_geo.py",
     "verify:motion": "node scripts/verify_motion.mjs"
   },
   "dependencies": {

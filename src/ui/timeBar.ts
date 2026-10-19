@@ -18,12 +18,16 @@ export interface TimeBarOptions {
   onMultiplierChange(multiplier: number): void;
   /** Called while the user drags the scrubber. */
   onScrub(day: SimDay): void;
+  /** Jump to the next disruption start (wraps to the earliest). */
+  onNextDisruption(): void;
 }
 
 export interface TimeBar {
   /** Called from the render loop; ignores sub-0.1-day changes. */
   sync(day: SimDay): void;
   setPlaying(playing: boolean): void;
+  /** Expand or collapse the visible range when the warm-up toggle changes. */
+  setRange(startDay: SimDay, endDay: SimDay): void;
 }
 
 /** Sim-hours of simulated time per wall-clock second. */
@@ -35,6 +39,9 @@ const SPEEDS: Array<{ label: string; hours: number }> = [
 ];
 
 export function createTimeBar(root: HTMLElement, options: TimeBarOptions): TimeBar {
+  let rangeStart = options.startDay;
+  let rangeEnd = options.endDay;
+
   const bar = el('div', 'timebar');
 
   const playButton = el('button', 'timebar__button', options.playing ? '暂停' : '播放');
@@ -44,6 +51,9 @@ export function createTimeBar(root: HTMLElement, options: TimeBarOptions): TimeB
     playButton.textContent = playing ? '暂停' : '播放';
     options.onPlayChange(playing);
   });
+
+  const nextDisruption = el('button', 'timebar__button', '下一扰动');
+  nextDisruption.addEventListener('click', () => options.onNextDisruption());
 
   const speedSelect = el('select', 'timebar__select');
   for (const speed of SPEEDS) {
@@ -59,10 +69,10 @@ export function createTimeBar(root: HTMLElement, options: TimeBarOptions): TimeB
 
   const slider = el('input', 'timebar__slider');
   slider.type = 'range';
-  slider.min = String(options.startDay);
-  slider.max = String(options.endDay);
+  slider.min = String(rangeStart);
+  slider.max = String(rangeEnd);
   slider.step = '0.1';
-  slider.value = String(options.startDay);
+  slider.value = String(rangeStart);
   let scrubbing = false;
   slider.addEventListener('input', () => {
     scrubbing = true;
@@ -74,15 +84,15 @@ export function createTimeBar(root: HTMLElement, options: TimeBarOptions): TimeB
   });
 
   const readout = el('span', 'timebar__readout');
-  renderReadout(options.startDay);
+  renderReadout(rangeStart);
 
-  bar.append(playButton, speedSelect, slider, readout);
+  bar.append(playButton, nextDisruption, speedSelect, slider, readout);
   root.append(bar);
 
   function renderReadout(day: SimDay): void {
-    readout.textContent = `${formatSimDay(day)} · ${formatSimDate(day)} / 共 ${Math.round(
-      options.endDay,
-    )} 天`;
+    readout.textContent = `${formatSimDay(day)} · ${formatSimDate(day)} / 至 Day ${Math.round(
+      rangeEnd,
+    )}`;
   }
 
   let lastRendered = Number.NaN;
@@ -97,6 +107,15 @@ export function createTimeBar(root: HTMLElement, options: TimeBarOptions): TimeB
     setPlaying(next: boolean): void {
       playing = next;
       playButton.textContent = playing ? '暂停' : '播放';
+    },
+    setRange(startDay: SimDay, endDay: SimDay): void {
+      rangeStart = startDay;
+      rangeEnd = endDay;
+      slider.min = String(rangeStart);
+      slider.max = String(rangeEnd);
+      slider.value = String(rangeStart);
+      lastRendered = rangeStart;
+      renderReadout(rangeStart);
     },
   };
 }

@@ -14,13 +14,20 @@ import type { TimeRange } from '../data/types';
 export interface AppConfig {
   /** Base URL of the `public/data` assets. */
   dataBaseUrl: string;
+  /** `placeholder-motion` (default) or `real-trajectory`. */
+  providerId: string;
   /** Id into `BASE_LAYER_REGISTRY`. */
   baseLayerId: string;
   /** Key / url for the base map - supplied at runtime, never in source. */
   baseLayerConfig: BaseLayerRuntimeConfig;
   /** Draw the local coastline asset (only meaningful with the none base map). */
   showCoastline: boolean;
+  /** Full motion range, including the warm-up period. */
+  dataRange: TimeRange;
+  /** Visible clock range; the warm-up is folded unless `showWarmUp` is set. */
   timeRange: TimeRange;
+  warmUpDays: number;
+  showWarmUp: boolean;
   /** Wall-clock multiplier applied to the Cesium clock at start-up. */
   clockMultiplier: number;
   /** Start playing automatically. */
@@ -32,10 +39,13 @@ export interface RuntimeConfig {
   apiKey?: string;
   tileUrl?: string;
   dataBaseUrl?: string;
+  providerId?: string;
   days?: number | string;
   multiplier?: number | string;
   coastline?: boolean;
   autoPlay?: boolean;
+  warmUp?: boolean;
+  warmUpDays?: number | string;
 }
 
 declare global {
@@ -46,16 +56,35 @@ declare global {
 }
 
 const DEFAULT_DAYS = 360;
+const DEFAULT_WARM_UP_DAYS = 140;
 
 export function resolveConfig(): AppConfig {
   const params = new URLSearchParams(window.location.search);
   const declared = { ...(window.WSC_CONFIG ?? {}), ...(window.WSC_MAP_CONFIG ?? {}) };
 
   const baseLayerId = firstString(params.get('baseLayer'), declared.baseLayer) ?? 'none';
+  const providerId =
+    firstString(params.get('provider'), declared.providerId) ??
+    'placeholder-motion';
   const days = firstNumber(params.get('days'), declared.days) ?? DEFAULT_DAYS;
+  const warmUpDays = Math.max(
+    0,
+    firstNumber(params.get('warmUpDays'), declared.warmUpDays) ??
+      DEFAULT_WARM_UP_DAYS,
+  );
+  const showWarmUp =
+    firstBool(params.get('warmUp'), declared.warmUp) ?? false;
+
+  const endDay = days;
+  const dataRange: TimeRange = { startDay: -warmUpDays, endDay };
+  const timeRange: TimeRange = {
+    startDay: showWarmUp ? -warmUpDays : 0,
+    endDay,
+  };
 
   return {
     dataBaseUrl: firstString(params.get('data'), declared.dataBaseUrl) ?? 'data',
+    providerId,
     baseLayerId,
     baseLayerConfig: {
       apiKey: firstString(params.get('apiKey'), declared.apiKey),
@@ -65,7 +94,10 @@ export function resolveConfig(): AppConfig {
       firstBool(params.get('coastline'), declared.coastline) ??
       // A tile base map already shows continents, so the outline is redundant.
       baseLayerId === 'none',
-    timeRange: { startDay: 0, endDay: days },
+    dataRange,
+    timeRange,
+    warmUpDays,
+    showWarmUp,
     clockMultiplier: firstNumber(params.get('multiplier'), declared.multiplier) ?? 3600,
     autoPlay: firstBool(params.get('autoPlay'), declared.autoPlay) ?? true,
   };

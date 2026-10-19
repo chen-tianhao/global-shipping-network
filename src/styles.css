@@ -40,6 +40,7 @@ body,
    draggable everywhere else. */
 #ui-root .hud,
 #ui-root .timebar,
+#ui-root .chart-panel,
 #ui-root .overlay {
   pointer-events: auto;
 }
@@ -243,6 +244,139 @@ body,
   color: var(--text-dim);
 }
 
+/* ---- camera presets ----------------------------------------------------- */
+
+.preset-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+}
+
+.preset-button {
+  padding: 5px 6px;
+  border: 1px solid var(--panel-border);
+  border-radius: 6px;
+  background: rgba(76, 201, 240, 0.1);
+  color: var(--text);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.preset-button:hover {
+  background: rgba(76, 201, 240, 0.24);
+}
+
+/* ---- chart panel -------------------------------------------------------- */
+
+.chart-panel {
+  position: absolute;
+  right: 20px;
+  bottom: 58px;
+  width: 380px;
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+  background: var(--panel);
+  backdrop-filter: blur(6px);
+  overflow: hidden;
+}
+
+.chart-panel__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-bottom: 1px solid rgba(120, 170, 220, 0.14);
+}
+
+.chart-panel__title {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--text-dim);
+  text-transform: uppercase;
+}
+
+.chart-panel__tabs {
+  display: flex;
+  gap: 3px;
+  margin-left: auto;
+}
+
+.chart-panel__tab,
+.chart-panel__collapse {
+  padding: 3px 7px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-dim);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.chart-panel__collapse {
+  border-color: var(--panel-border);
+}
+
+.chart-panel__tab:hover {
+  color: var(--text);
+}
+
+.chart-panel__tab.is-active {
+  border-color: var(--panel-border);
+  background: rgba(76, 201, 240, 0.14);
+  color: var(--text);
+}
+
+.chart-panel__body {
+  height: 250px;
+}
+
+.chart-panel__hint {
+  margin: 0;
+  padding: 5px 10px 7px;
+  border-top: 1px solid rgba(120, 170, 220, 0.1);
+  font-size: 10px;
+  line-height: 1.5;
+  color: var(--text-dim);
+}
+
+.chart-panel__empty,
+.chart-panel__error {
+  margin: 0;
+  padding: 16px 12px;
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--text-dim);
+}
+
+.chart-panel__error {
+  color: #ffd7d7;
+}
+
+.chart-panel.is-collapsed .chart-panel__body,
+.chart-panel.is-collapsed .chart-panel__hint {
+  display: none;
+}
+
+/* ---- hover tooltip ------------------------------------------------------ */
+
+.tooltip {
+  position: fixed;
+  z-index: 30;
+  max-width: 220px;
+  padding: 5px 8px;
+  border: 1px solid var(--panel-border);
+  border-radius: 6px;
+  background: rgba(9, 20, 34, 0.94);
+  color: var(--text);
+  font-size: 11px;
+  line-height: 1.4;
+  white-space: nowrap;
+  pointer-events: none;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+}
+
 /* ---- overlays ----------------------------------------------------------- */
 
 .overlay {
@@ -266,10 +400,29 @@ body,
 
 /* ---- Cesium chrome ------------------------------------------------------ */
 
-/* Credits are hidden in code (viewer.cesiumWidget.creditContainer). The
-   bottom container itself is left alone so the timeline stays visible. */
+/* Credits are collapsed in code when the base map supplies no attribution
+   (viewerFactory sets `display: none` for the `none` provider). The container
+   must stay usable, so no global `display: none` here: plugging in a tile
+   provider has to bring its attribution back. */
 .cesium-widget-credits {
-  display: none !important;
+  font-size: 10px;
+  opacity: 0.7;
+}
+
+/* Shown only while the WebGL context is lost; see viewerFactory. */
+.gl-lost {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  padding: 10px 16px;
+  border-radius: 8px;
+  background: rgba(42, 11, 11, 0.9);
+  border: 1px solid #ff6b6b;
+  color: #ffd7d7;
+  font-size: 13px;
+  z-index: 20;
+  pointer-events: none;
 }
 
 .cesium-viewer-timelineContainer {

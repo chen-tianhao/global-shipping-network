@@ -1,5 +1,8 @@
 import type { Viewer } from 'cesium';
+import type { PickPayload } from '../../data/types';
 import type { SceneModel } from '../../viewmodel/sceneModel';
+
+export type { PickPayload };
 
 /**
  * Contract for every renderable layer.
@@ -17,10 +20,4 @@ export interface SceneLayer {
   isVisible(): boolean;
   highlight(ids: string[]): void;
   dispose(): void;
-}
-
-export interface PickPayload {
-  kind: 'port' | 'vessel' | 'route' | 'disruption';
-  id: string;
-  label: string;
 }

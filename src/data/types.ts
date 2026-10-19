@@ -47,6 +47,11 @@ export interface RouteVM {
   isAlternative: boolean;
   totalDistanceNm: number;
   vessels?: number;
+  /**
+   * Average deployed capacity in TEU, joined from
+   * `Service_Route_Utilization.csv` ("Avg Capacity TEU").
+   */
+  capacityTeu?: number;
 }
 
 export type VesselState = 'sailing' | 'queuing' | 'served' | 'idle';
@@ -133,4 +138,14 @@ export interface NetworkGraph {
 export interface TimeRange {
   startDay: SimDay;
   endDay: SimDay;
+}
+
+/**
+ * Business identity of a picked object. Kept in the data layer so UI panels and
+ * the event bus never have to import anything from `src/cesium/`.
+ */
+export interface PickPayload {
+  kind: 'port' | 'vessel' | 'route' | 'disruption';
+  id: string;
+  label: string;
 }

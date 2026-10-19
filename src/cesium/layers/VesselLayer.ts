@@ -9,9 +9,11 @@
  *   2. linearly interpolate between the two neighbouring samples;
  *   3. write position / colour / size into the existing primitives.
  * It never adds or removes primitives, never allocates collections, and never
- * touches the data provider. The single per-vessel `Cartesian3` written each
- * frame is the only allocation, and it is deliberate: in-place mutation of a
- * shared scratch object would alias across primitives.
+ * touches the data provider. Positions are written through one module-level
+ * scratch vector: `PointPrimitive.position` clones into the primitive's own
+ * storage (and marks it dirty), so the scratch never aliases between vessels.
+ * Mutating a vector in place would be wrong - the setter is what flags the
+ * primitive for re-upload.
  *
  * Interpolation is a rendering concern, not a modelling one: samples are
  * typically hours apart (0.25 day in the placeholder provider), and without it
@@ -24,6 +26,7 @@
 import {
   Cartesian3,
   Color,
+  Ellipsoid,
   PointPrimitiveCollection,
   type PointPrimitive,
   type Viewer,
@@ -39,6 +42,9 @@ const BASE_PIXEL = 7;
 const TEU_PER_PIXEL = 2500;
 const MIN_PIXEL = 7;
 const MAX_PIXEL = 16;
+
+/** Reused every frame; `PointPrimitive.position` clones it into place. */
+const POSITION_SCRATCH = new Cartesian3();
 
 const OUTLINE_NORMAL = Color.fromCssColorString('#04121f');
 const OUTLINE_HIGHLIGHT = Color.fromCssColorString('#ffd166');
@@ -116,7 +122,8 @@ export class VesselLayer implements SceneLayer {
       const lon = Number.isFinite(lonB) ? interpolateLon(lonA, lonB, t) : lonA;
       const lat = Number.isFinite(latB) ? latA + (latB - latA) * t : latA;
 
-      primitive.position = Cartesian3.fromDegrees(lon, lat, 0);
+      Cartesian3.fromDegrees(lon, lat, 0, Ellipsoid.WGS84, POSITION_SCRATCH);
+      primitive.position = POSITION_SCRATCH;
       primitive.show = true;
       primitive.color = STATE_COLORS[track.state[frame]] ?? FALLBACK_COLOR;
 

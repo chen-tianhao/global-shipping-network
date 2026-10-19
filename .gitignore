@@ -23,13 +23,14 @@ vite.config.ts.timestamp-*
 *.log
 build.log
 preview.log
-smoke-screenshot.png
+smoke-*.png
 .verify-motion/
 
 # ---- 脚本生成物（由 npm run build:geo / build:coastline 重新生成，无需入库）----
 # 注意：保留同目录下的 *.csv（真实源数据）。
 public/data/*.json
 public/data/stats/
+public/data/trajectory/
 
 # ---- 环境变量（后续接入底图密钥等，勿入库；可保留 .env.example 作为模板）----
 .env

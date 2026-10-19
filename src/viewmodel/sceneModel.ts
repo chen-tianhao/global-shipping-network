@@ -33,9 +33,20 @@ export function createSceneModel(parts: {
   isPlaceholderMotion: boolean;
   timeRange: { startDay: SimDay; endDay: SimDay };
 }): SceneModel {
+  // Deployed capacity lives in the stats bundle, not in the route geometry.
+  // Join it here so a route carries everything the UI needs to describe it,
+  // instead of every caller having to look up two collections.
+  const capacityByRoute = new Map(
+    (parts.stats?.routeUtilization ?? []).map((row) => [row.routeId, row.capacityTeu]),
+  );
+  const routes = parts.graph.routes.map((route) => {
+    const capacityTeu = capacityByRoute.get(route.id);
+    return capacityTeu === undefined ? route : { ...route, capacityTeu };
+  });
+
   return {
     ports: parts.graph.ports,
-    routes: parts.graph.routes,
+    routes,
     motion: parts.motion,
     disruptions: parts.disruptions,
     stats: parts.stats,

@@ -12,7 +12,13 @@
  * `export_trajectory.py` output is available.
  */
 
-import { fetchJson, fetchText, parseCsv, toNumber } from '../provider';
+import {
+  fetchJson,
+  fetchText,
+  parseCsv,
+  toNumber,
+  type ProviderContext,
+} from '../provider';
 import type {
   NetworkGraph,
   RouteVM,
@@ -27,6 +33,7 @@ import {
   interpolateGreatCircle,
 } from '../geo/geoMath';
 import { mapPorts, mapSegments } from './shared';
+import type { MotionProvider } from './motionProvider';
 
 /**
  * Sampling step: 1 hour, matching the plan's 37万-point estimate.
@@ -45,14 +52,15 @@ interface VesselClassRow {
   speed: number;
 }
 
-export class PlaceholderMotionProvider {
+export class PlaceholderMotionProvider implements MotionProvider {
   readonly id = 'placeholder-motion';
+  readonly isPlaceholder = true;
 
   private graph: NetworkGraph = { ports: [], routes: [] };
   private classes = new Map<string, VesselClassRow>();
 
-  async init(baseUrl: string): Promise<NetworkGraph> {
-    const root = baseUrl.replace(/\/$/, '');
+  async init(ctx: ProviderContext): Promise<void> {
+    const root = ctx.baseUrl.replace(/\/$/, '');
     const [portsFile, routesFile, planText, classText] = await Promise.all([
       fetchJson<{ ports: Array<Record<string, unknown>> }>(`${root}/ports.json`),
       fetchJson<{ routes: Array<Record<string, unknown>> }>(`${root}/routes.json`),
@@ -97,14 +105,13 @@ export class PlaceholderMotionProvider {
       });
 
     this.graph = { ports, routes };
-    return this.graph;
   }
 
   getStaticGraph(): NetworkGraph {
     return this.graph;
   }
 
-  getMotion(range: TimeRange): VesselTrackSet {
+  async getMotion(range: TimeRange): Promise<VesselTrackSet> {
     const startDay = range.startDay;
     const endDay = range.endDay;
     const frameCount = Math.max(2, Math.floor((endDay - startDay) / STEP_DAYS) + 1);
