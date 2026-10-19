@@ -36,3 +36,16 @@
 - [x] `npm run build:geo` / `verify:geo` 的解释器解析：新增 `scripts/run-python.mjs`（`$WSC_PYTHON` → `.venv` → 托管运行时 → PATH），探针要求 `import numpy`；`$WSC_PYTHON` 无效时直接失败而不是静默回退。已补 `scripts/requirements.txt`。
 - [ ] CI 串起 `typecheck → build → verify:motion → smoke`；`verify:geo` 在具备 numpy 的环境单独跑。
 - [ ] 统一规划文档与实际数据口径（20/22 港口、`disruptions.json`）。`RouteVM.capacityTeu` 已由 `Service_Route_Utilization.csv` 关联补齐。
+
+## 移动端（`mobile` 分支）
+
+- [x] P0 布局：≤640px 切到「全屏地球 + 底部 sheet」，详情/图例/图层/图表全部搬入；顶部状态条与底部时间条压缩；`100dvh` + `env(safe-area-inset-*)`。
+- [x] 触屏交互：关闭 hover 提示、拾取半径 3 → 22 px、详情面板加「定位到此处」替代双击飞行。
+- [x] 图表窄屏收敛：隐藏 OD 矩阵（390 px 下每格约 14 px）。
+- [x] 陆地底色窄屏改用 `landmask-2k.png`（GPU 约 8 MB，桌面仍用 4096）。
+- [x] 横竖屏切换时布局双向搬迁，横屏回到浮动三栏。
+- [ ] sheet 展开会盖住底部时间条：考虑展开时把时间条上移到 sheet 之上，或把时间控制并进 sheet。
+- [ ] sheet 支持下拉/上滑手势（当前只有点击手柄）。
+- [ ] 移动端 `resolutionScale` 限流（P2）。
+- [ ] 真机回归：iOS Safari 安全区、双指缩放与双击冲突、中端安卓帧率。
+- [ ] `flyToHome` 在竖屏下按宽高比调整 padding（当前非洲/欧洲占比偏大）。

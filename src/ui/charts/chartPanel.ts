@@ -38,6 +38,13 @@ const TAB_DEFS: Array<[Tab, string]> = [
   ['od', 'OD 矩阵'],
 ];
 
+/**
+ * 22x22 cells do not survive a 360 px wide sheet: each cell is ~14 px, below the
+ * touch target minimum and unreadable. The OD matrix is desktop-only; phones
+ * keep the two charts that still work at that width.
+ */
+const NARROW_QUERY = '(max-width: 640px)';
+
 export function createChartPanel(
   root: HTMLElement,
   model: SceneModel,
@@ -60,7 +67,10 @@ export function createChartPanel(
   header.append(el('h2', 'chart-panel__title', '统计图表'));
 
   const tabs = el('div', 'chart-panel__tabs');
-  for (const [tab, label] of TAB_DEFS) {
+  const availableTabs = window.matchMedia(NARROW_QUERY).matches
+    ? TAB_DEFS.filter(([tab]) => tab !== 'od')
+    : TAB_DEFS;
+  for (const [tab, label] of availableTabs) {
     const button = el('button', 'chart-panel__tab', label);
     button.type = 'button';
     button.addEventListener('click', () => setTab(tab));

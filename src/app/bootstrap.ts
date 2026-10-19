@@ -40,6 +40,7 @@ import type { PickPayload } from '../data/types';
 import { createEventBus } from '../ui/eventBus';
 import { createChartPanel } from '../ui/charts/chartPanel';
 import { createHud } from '../ui/hud';
+import { createMobileSheet, MOBILE_QUERY, type MobileSheet } from '../ui/mobileSheet';
 import { createTimeBar } from '../ui/timeBar';
 import { createTooltip } from '../ui/tooltip';
 import { el } from '../ui/dom';
@@ -114,8 +115,13 @@ export async function bootstrap(mount: {
     // The wash is imagery, so it paints under every primitive. Skip it when a
     // tile base map is active: there the imagery is already the land surface.
     if (config.showLandWash && !bundle.baseLayerActive) {
+      // Phones get the half-resolution tile: 4096x2048 is ~32 MB of GPU
+      // memory (plus mipmaps) and some mobile GPUs cap out at 4096.
+      const maskFile = window.matchMedia(MOBILE_QUERY).matches
+        ? 'landmask-2k.png'
+        : 'landmask.png';
       const wash = await LandWashLayer.create(
-        `${config.dataBaseUrl.replace(/\/$/, '')}/landmask.png`,
+        `${config.dataBaseUrl.replace(/\/$/, '')}/${maskFile}`,
       );
       if (wash) layers.push(wash);
     }
@@ -194,13 +200,57 @@ export async function bootstrap(mount: {
       onPreset: (preset) => {
         bus.emit('viewport:changed', { preset });
       },
+      onLocate: (payload) => flyToSelection(viewer, model, payload),
     });
 
     const chartPanel = createChartPanel(chartRoot, model, bus);
 
+    // On phones the three floating panels cannot coexist (214 + 250 + 380 px
+    // on a 390 px screen). Move them into one bottom sheet, details first.
+    // Rotation changes the media query, so this has to be reversible: a phone
+    // held in landscape is wider than the breakpoint and must go back to the
+    // floating layout instead of leaving the panels inside a hidden sheet.
+    const narrowQuery = window.matchMedia(MOBILE_QUERY);
+    let sheet: MobileSheet | null = null;
+
+    function moveIntoSheet(next: MobileSheet): void {
+      const detailsPanel = hudRoot.querySelector('.hud--right');
+      const layersPanel = hudRoot.querySelector('.hud--left');
+      if (detailsPanel) next.body.append(detailsPanel);
+      if (layersPanel) next.body.append(layersPanel);
+      next.body.append(chartRoot);
+    }
+
+    function restoreFloatingLayout(): void {
+      if (!sheet) return;
+      const detailsPanel = sheet.body.querySelector('.hud--right');
+      const layersPanel = sheet.body.querySelector('.hud--left');
+      // Re-append into the original hosts, then let the sheet go.
+      if (layersPanel) hudRoot.append(layersPanel);
+      if (detailsPanel) hudRoot.append(detailsPanel);
+      mount.ui.append(chartRoot);
+      sheet.element.remove();
+      sheet = null;
+    }
+
+    function syncLayout(): void {
+      if (narrowQuery.matches && !sheet) {
+        sheet = createMobileSheet(mount.ui);
+        if (sheet) moveIntoSheet(sheet);
+      } else if (!narrowQuery.matches && sheet) {
+        restoreFloatingLayout();
+      }
+    }
+
+    syncLayout();
+    narrowQuery.addEventListener('change', syncLayout);
+
     // ---- event wiring -----------------------------------------------------
     bus.on('selection:changed', ({ payload, source, ids }) => {
       hud.setSelected(payload);
+      // On a phone the details live in the collapsed sheet; raise it so a tap
+      // on a port actually shows something.
+      if (sheet && payload && source === 'scene') sheet.setOpen(true);
       const highlightIds = ids ?? (payload ? [payload.id] : []);
       highlight(layers, highlightIds);
       viewer.scene.requestRender();
@@ -303,6 +353,10 @@ export async function bootstrap(mount: {
           clientY,
         );
       },
+    }, {
+      // Touch has no hover, and a 3 px pick radius is unusable with a finger.
+      hover: window.matchMedia('(hover: hover)').matches,
+      pickRadius: window.matchMedia('(pointer: coarse)').matches ? 22 : 3,
     });
 
     // MOUSE_MOVE stops firing when the pointer leaves the canvas, so the last

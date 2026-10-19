@@ -29,7 +29,7 @@ import { fileURLToPath } from 'node:url';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SOURCE = path.join(repoRoot, 'data/ne_50m_land.geojson');
-const OUT = path.join(repoRoot, 'public/data/landmask.png');
+const DEFAULT_OUT = path.join(repoRoot, 'public/data/landmask.png');
 
 const args = new Map();
 for (let i = 2; i < process.argv.length; i += 1) {
@@ -42,6 +42,7 @@ for (let i = 2; i < process.argv.length; i += 1) {
 const WIDTH = Number(args.get('width') ?? 4096);
 const HEIGHT = Number(args.get('height') ?? 2048);
 const FEATHER = Number(args.get('feather') ?? 1);
+const OUT = args.get('out') ? path.resolve(repoRoot, args.get('out')) : DEFAULT_OUT;
 const COLOR = hexToRgb(args.get('color') ?? '1C3141');
 
 if (!Number.isInteger(WIDTH) || !Number.isInteger(HEIGHT) || WIDTH < 256 || HEIGHT < 128) {

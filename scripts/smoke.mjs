@@ -19,11 +19,17 @@ import path from 'node:path';
 const CHROME =
   process.env.WSC_CHROME ??
   'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
-const TARGET = process.argv[2] ?? process.env.WSC_URL ?? 'http://127.0.0.1:4173/';
+const cliArgs = process.argv.slice(2);
+const TARGET =
+  cliArgs.find((arg) => !arg.startsWith('--')) ??
+  process.env.WSC_URL ??
+  'http://127.0.0.1:4173/';
 const REAL =
   /[?&]provider=(?:real|real-trajectory)(?:&|$)/.test(TARGET) ||
   process.env.WSC_PROVIDER === 'real';
 const EXPECTED_WARM_UP_DAYS = REAL ? 20 : 140;
+/** Render as a 390x844 phone and assert the bottom-sheet layout instead. */
+const MOBILE = process.env.WSC_MOBILE === '1' || cliArgs.includes('--mobile');
 const DEBUG_PORT = 9333;
 // SwiftShader + Cesium shader compilation can take ~10 s on a cold profile;
 // 9 s made the first probe race the bootstrap and report a false "not ready".
@@ -149,6 +155,15 @@ try {
   await cdp.send('Runtime.enable');
   await cdp.send('Log.enable');
   await cdp.send('Page.enable');
+  if (MOBILE) {
+    // 390x844 = iPhone 14/15 logical size; the CSS breakpoint is 640 px.
+    await cdp.send('Emulation.setDeviceMetricsOverride', {
+      width: 390,
+      height: 844,
+      deviceScaleFactor: 2,
+      mobile: true,
+    });
+  }
   await cdp.send('Page.navigate', { url: TARGET });
 
   const probe = async (expression) => {
@@ -312,9 +327,15 @@ try {
       );
       const presetButtons = document.querySelectorAll('.preset-button').length;
       const warmUpToggle = Boolean(document.querySelector('.warmup-toggle'));
+      const sheet = document.querySelector('.mobile-sheet');
 
       return {
         ready: true,
+        viewport: { w: window.innerWidth, h: window.innerHeight },
+        sheet: Boolean(sheet),
+        sheetOpen: Boolean(sheet && sheet.classList.contains('is-open')),
+        sheetHasDetails: Boolean(sheet && sheet.querySelector('.details')),
+        sheetHasCharts: Boolean(sheet && sheet.querySelector('.chart-panel')),
         maxOffRouteNm: Math.round(maxOffRouteNm),
         worstOffRoute,
         disruptionItems,
@@ -404,7 +425,7 @@ try {
       error instanceof Error ? error.message : error,
     );
   }
-  const outFile = path.join(process.cwd(), 'smoke-screenshot.png');
+  const outFile = path.join(process.cwd(), MOBILE ? 'smoke-mobile.png' : 'smoke-screenshot.png');
   if (shot) fs.writeFileSync(outFile, Buffer.from(shot.data, 'base64'));
 
   // Render throttling: a paused scene must stop drawing. Cesium's clock keeps
@@ -490,15 +511,66 @@ try {
   }
   if (interactionShot) {
     fs.writeFileSync(
-      path.join(process.cwd(), 'smoke-interaction.png'),
+      path.join(process.cwd(), MOBILE ? 'smoke-mobile-interaction.png' : 'smoke-interaction.png'),
       Buffer.from(interactionShot.data, 'base64'),
     );
+  }
+
+  // Mobile: capture the sheet open, which is where details/layers/charts live.
+  if (MOBILE) {
+    await probe(`
+      (() => {
+        document.querySelector('.mobile-sheet__handle')?.click();
+        return true;
+      })()
+    `);
+    await sleep(500);
+    try {
+      const sheetShot = await cdp.send('Page.captureScreenshot', { format: 'png' });
+      fs.writeFileSync(
+        path.join(process.cwd(), 'smoke-mobile-sheet.png'),
+        Buffer.from(sheetShot.data, 'base64'),
+      );
+    } catch (error) {
+      console.warn('sheet screenshot skipped:', error instanceof Error ? error.message : error);
+    }
+    await probe(`
+      (() => {
+        document.querySelector('.mobile-sheet__handle')?.click();
+        return true;
+      })()
+    `);
+  }
+
+  // Mobile rotation: 844x390 is wider than the 640 px breakpoint, so the app
+  // must put the panels back on the globe and drop the sheet entirely.
+  let rotation = null;
+  if (MOBILE) {
+    await cdp.send('Emulation.setDeviceMetricsOverride', {
+      width: 844,
+      height: 390,
+      deviceScaleFactor: 2,
+      mobile: true,
+    });
+    await sleep(600);
+    rotation = await probe(`
+      (() => {
+        const details = document.querySelector('.hud--right');
+        const chart = document.querySelector('.chart-panel');
+        return {
+          width: window.innerWidth,
+          sheet: Boolean(document.querySelector('.mobile-sheet')),
+          detailsInSheet: Boolean(details && details.closest('.mobile-sheet')),
+          chartInSheet: Boolean(chart && chart.closest('.mobile-sheet')),
+        };
+      })()
+    `);
   }
 
   // Optional close-up (`WSC_ZOOM=1`): the land wash exists so that land and
   // sea stay distinguishable when zoomed in, and that is impossible to judge
   // from a whole-globe screenshot.
-  if (process.env.WSC_ZOOM === '1') {
+  if (process.env.WSC_ZOOM === '1' && !MOBILE) {
     await probe(`
       (() => {
         const w = window.__WSC__;
@@ -569,7 +641,10 @@ try {
   }
 
   // Exercise the third tab (heatmap) as well; the selection above already
-  // exercised the port-bar tab.
+  // exercised the port-bar tab. Phones drop this tab: a 22x22 matrix at 390 px
+  // gives ~14 px cells, below the touch target minimum.
+  let odProbe = { ready: true, active: '', skipped: true };
+  if (!MOBILE) {
   await probe(`
     (() => {
       const tabs = [...document.querySelectorAll('.chart-panel__tab')];
@@ -578,7 +653,7 @@ try {
     })()
   `);
   await sleep(900);
-  const odProbe = await probe(`
+  odProbe = await probe(`
     (() => {
       const panel = document.querySelector('.chart-panel');
       return {
@@ -587,6 +662,7 @@ try {
       };
     })()
   `);
+  }
 
   const firstPositions = first.positions ?? [];
   const secondPositions = second.positions ?? [];
@@ -617,6 +693,7 @@ try {
         movedCount,
         idleFrames: idle.frames,
         interaction,
+        rotation,
         odProbe,
       },
       null,
@@ -670,8 +747,31 @@ try {
       `${first.congestedLegs - first.congestedWithGeometry} congested legs have no route geometry`,
     );
   }
-  if (first.chartTabs !== 3) {
-    failures.push(`expected 3 chart tabs, found ${first.chartTabs}`);
+  const expectedTabs = MOBILE ? 2 : 3;
+  if (first.chartTabs !== expectedTabs) {
+    failures.push(`expected ${expectedTabs} chart tabs, found ${first.chartTabs}`);
+  }
+  if (MOBILE) {
+    if (first.viewport.w > 640) {
+      failures.push(`viewport override failed (width ${first.viewport.w})`);
+    }
+    if (!first.sheet) failures.push('mobile layout: bottom sheet is missing');
+    if (!first.sheetHasDetails) {
+      failures.push('mobile layout: details panel was not moved into the sheet');
+    }
+    if (!first.sheetHasCharts) {
+      failures.push('mobile layout: chart panel was not moved into the sheet');
+    }
+    if (
+      rotation &&
+      (rotation.sheet || rotation.detailsInSheet || rotation.chartInSheet)
+    ) {
+      failures.push(
+        `landscape rotation did not restore the floating layout (${JSON.stringify(rotation)})`,
+      );
+    }
+  } else if (first.sheet) {
+    failures.push('desktop layout: the mobile sheet should not exist');
   }
   if (!first.chartReady) {
     failures.push('chart panel did not render a Plotly chart');
@@ -734,11 +834,13 @@ try {
       );
     }
   }
-  if (!odProbe.ready) {
-    failures.push('OD heatmap did not render');
-  }
-  if (!odProbe.active.includes('OD')) {
-    failures.push(`OD tab did not activate (got "${odProbe.active}")`);
+  if (!MOBILE) {
+    if (!odProbe.ready) {
+      failures.push('OD heatmap did not render');
+    }
+    if (!odProbe.active.includes('OD')) {
+      failures.push(`OD tab did not activate (got "${odProbe.active}")`);
+    }
   }
   if (!(second.day > first.day)) failures.push('clock is not advancing');
   if (first.skyBox !== 'none') failures.push('star sky box is present (should be disabled)');
