@@ -14,6 +14,7 @@
 import { julianToDay, dayToJulian } from '../cesium/clock';
 import { createViewer } from '../cesium/viewerFactory';
 import { CoastlineLayer } from '../cesium/baseLayer/coastline';
+import { LandWashLayer } from '../cesium/baseLayer/landWash';
 import { DisruptionLayer } from '../cesium/layers/DisruptionLayer';
 import { PortLayer } from '../cesium/layers/PortLayer';
 import { RouteLayer } from '../cesium/layers/RouteLayer';
@@ -110,6 +111,14 @@ export async function bootstrap(mount: {
 
     // ---- layers -----------------------------------------------------------
     const layers: SceneLayer[] = [];
+    // The wash is imagery, so it paints under every primitive. Skip it when a
+    // tile base map is active: there the imagery is already the land surface.
+    if (config.showLandWash && !bundle.baseLayerActive) {
+      const wash = await LandWashLayer.create(
+        `${config.dataBaseUrl.replace(/\/$/, '')}/landmask.png`,
+      );
+      if (wash) layers.push(wash);
+    }
     if (config.showCoastline) {
       const rings = await loadCoastline(config.dataBaseUrl);
       if (rings) layers.push(new CoastlineLayer(rings));

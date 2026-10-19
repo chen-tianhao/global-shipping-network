@@ -1,0 +1,224 @@
+{
+  "ports": [
+    {
+      "id": "shanghai",
+      "name": "Shanghai",
+      "lon": 121.6,
+      "lat": 31.2,
+      "berthCount": 3,
+      "coordsVerified": true,
+      "note": "外高桥港区/长江口",
+      "tunnelledToSea": false
+    },
+    {
+      "id": "singapore",
+      "name": "Singapore",
+      "lon": 103.8,
+      "lat": 1.26,
+      "berthCount": 3,
+      "coordsVerified": true,
+      "note": "PSA 丹戎巴葛-巴西班让",
+      "tunnelledToSea": false
+    },
+    {
+      "id": "shenzhen",
+      "name": "Shenzhen",
+      "lon": 114.27,
+      "lat": 22.57,
+      "berthCount": 2,
+      "coordsVerified": true,
+      "note": "盐田港区",
+      "tunnelledToSea": true
+    },
+    {
+      "id": "qingdao",
+      "name": "Qingdao",
+      "lon": 120.19,
+      "lat": 36.02,
+      "berthCount": 2,
+      "coordsVerified": true,
+      "note": "前湾港区",
+      "tunnelledToSea": true
+    },
+    {
+      "id": "busan",
+      "name": "Busan",
+      "lon": 128.83,
+      "lat": 35.06,
+      "berthCount": 2,
+      "coordsVerified": true,
+      "note": "釜山新港",
+      "tunnelledToSea": true
+    },
+    {
+      "id": "tianjin",
+      "name": "Tianjin",
+      "lon": 117.72,
+      "lat": 38.96,
+      "berthCount": 1,
+      "coordsVerified": true,
+      "note": "北疆港区",
+      "tunnelledToSea": false
+    },
+    {
+      "id": "xiamen",
+      "name": "Xiamen",
+      "lon": 118.02,
+      "lat": 24.48,
+      "berthCount": 1,
+      "coordsVerified": true,
+      "note": "海沧港区",
+      "tunnelledToSea": true
+    },
+    {
+      "id": "kaohsiung",
+      "name": "Kaohsiung",
+      "lon": 120.28,
+      "lat": 22.61,
+      "berthCount": 2,
+      "coordsVerified": true,
+      "note": "中国台湾高雄港",
+      "tunnelledToSea": true
+    },
+    {
+      "id": "laem-chabang",
+      "name": "Laem Chabang",
+      "lon": 100.88,
+      "lat": 13.08,
+      "berthCount": 1,
+      "coordsVerified": true,
+      "note": "泰国林查班港",
+      "tunnelledToSea": true
+    },
+    {
+      "id": "ho-chi-minh-city",
+      "name": "Ho Chi Minh City",
+      "lon": 106.75,
+      "lat": 10.75,
+      "berthCount": 1,
+      "coordsVerified": true,
+      "note": "越南盖梅-莱拉港区",
+      "tunnelledToSea": true
+    },
+    {
+      "id": "jakarta",
+      "name": "Jakarta",
+      "lon": 106.88,
+      "lat": -6.1,
+      "berthCount": 1,
+      "coordsVerified": true,
+      "note": "丹戎不碌港",
+      "tunnelledToSea": true
+    },
+    {
+      "id": "colombo",
+      "name": "Colombo",
+      "lon": 79.84,
+      "lat": 6.95,
+      "berthCount": 2,
+      "coordsVerified": true,
+      "note": "斯里兰卡科伦坡港",
+      "tunnelledToSea": true
+    },
+    {
+      "id": "jebel-ali",
+      "name": "Jebel Ali",
+      "lon": 55.06,
+      "lat": 25.01,
+      "berthCount": 2,
+      "coordsVerified": true,
+      "note": "阿联酋杰贝阿里港",
+      "tunnelledToSea": true
+    },
+    {
+      "id": "rotterdam",
+      "name": "Rotterdam",
+      "lon": 4.08,
+      "lat": 51.95,
+      "berthCount": 3,
+      "coordsVerified": true,
+      "note": "马斯夫拉克特港区",
+      "tunnelledToSea": true
+    },
+    {
+      "id": "hamburg",
+      "name": "Hamburg",
+      "lon": 9.98,
+      "lat": 53.54,
+      "berthCount": 2,
+      "coordsVerified": true,
+      "note": "易北河沿岸港区",
+      "tunnelledToSea": false
+    },
+    {
+      "id": "piraeus",
+      "name": "Piraeus",
+      "lon": 23.65,
+      "lat": 37.94,
+      "berthCount": 2,
+      "coordsVerified": true,
+      "note": "希腊比雷埃夫斯港",
+      "tunnelledToSea": true
+    },
+    {
+      "id": "los-angeles",
+      "name": "Los Angeles",
+      "lon": -118.26,
+      "lat": 33.74,
+      "berthCount": 2,
+      "coordsVerified": true,
+      "note": "圣佩德罗湾区",
+      "tunnelledToSea": false
+    },
+    {
+      "id": "new-jersey",
+      "name": "New Jersey",
+      "lon": -74.08,
+      "lat": 40.67,
+      "berthCount": 2,
+      "coordsVerified": true,
+      "note": "纽约-新泽西港区",
+      "tunnelledToSea": false
+    },
+    {
+      "id": "tanger-med",
+      "name": "Tanger Med",
+      "lon": -5.5,
+      "lat": 35.88,
+      "berthCount": 2,
+      "coordsVerified": true,
+      "note": "摩洛哥丹吉尔地中海港",
+      "tunnelledToSea": false
+    },
+    {
+      "id": "cartagena",
+      "name": "Cartagena",
+      "lon": -75.51,
+      "lat": 10.4,
+      "berthCount": 1,
+      "coordsVerified": true,
+      "note": "哥伦比亚卡塔赫纳港",
+      "tunnelledToSea": true
+    },
+    {
+      "id": "port-klang",
+      "name": "Port Klang",
+      "lon": 101.39,
+      "lat": 3.0,
+      "berthCount": 1,
+      "coordsVerified": true,
+      "note": "马来西亚巴生港",
+      "tunnelledToSea": false
+    },
+    {
+      "id": "antwerp",
+      "name": "Antwerp",
+      "lon": 4.4,
+      "lat": 51.26,
+      "berthCount": 1,
+      "coordsVerified": true,
+      "note": "斯海尔德河沿岸港区",
+      "tunnelledToSea": false
+    }
+  ]
+}

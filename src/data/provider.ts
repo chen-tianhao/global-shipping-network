@@ -83,12 +83,43 @@ export function toNumber(raw: string | undefined): number {
   return Number.isFinite(value) ? value : NaN;
 }
 
+/**
+ * A missing asset on a static host usually comes back as the SPA fallback:
+ * HTTP 200 with `index.html`. `response.ok` is true, and `response.json()`
+ * then fails with the famously unhelpful "Unexpected token '<'". Detect the
+ * HTML case and say what actually happened.
+ */
+function assertAssetResponse(
+  url: string,
+  response: Response,
+  expected: 'JSON' | 'CSV',
+): void {
+  const type = response.headers.get('content-type') ?? '';
+  if (!type.includes('text/html')) return;
+
+  throw new Error(
+    `Expected ${expected} from ${url} but received an HTML page. ` +
+      `The file is probably missing on the server (the SPA fallback returned index.html). ` +
+      `Deploy the *contents* of dist/ so that data/ sits next to index.html, ` +
+      `or point the app at the right directory with ?data=/your/data. ` +
+      `Run "npm run check:dist" before deploying to catch this.`,
+  );
+}
+
 export async function fetchJson<T>(url: string, signal?: AbortSignal): Promise<T> {
   const response = await fetch(url, { signal });
   if (!response.ok) {
     throw new Error(`Failed to load ${url}: HTTP ${response.status}`);
   }
-  return (await response.json()) as T;
+  assertAssetResponse(response.url || url, response, 'JSON');
+  try {
+    return (await response.json()) as T;
+  } catch (error) {
+    throw new Error(
+      `Failed to parse JSON from ${response.url || url}: ${describe(error)}. ` +
+        `If this file exists, check that it is valid JSON and not an HTML error page.`,
+    );
+  }
 }
 
 export async function fetchText(url: string, signal?: AbortSignal): Promise<string> {
@@ -96,5 +127,10 @@ export async function fetchText(url: string, signal?: AbortSignal): Promise<stri
   if (!response.ok) {
     throw new Error(`Failed to load ${url}: HTTP ${response.status}`);
   }
+  assertAssetResponse(response.url || url, response, 'CSV');
   return await response.text();
+}
+
+function describe(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }

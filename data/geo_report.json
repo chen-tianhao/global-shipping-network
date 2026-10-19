@@ -1,0 +1,246 @@
+{
+  "grid": {
+    "resolutionDeg": 0.25,
+    "rows": 720,
+    "cols": 1440,
+    "oceanFraction": 0.6579
+  },
+  "ports": [
+    {
+      "tunnelled": false,
+      "cells": 0,
+      "name": "Shanghai",
+      "lon": 121.6,
+      "lat": 31.2,
+      "verified": true,
+      "note": "外高桥港区/长江口"
+    },
+    {
+      "tunnelled": false,
+      "cells": 0,
+      "name": "Singapore",
+      "lon": 103.8,
+      "lat": 1.26,
+      "verified": true,
+      "note": "PSA 丹戎巴葛-巴西班让"
+    },
+    {
+      "tunnelled": true,
+      "cells": 3,
+      "name": "Shenzhen",
+      "lon": 114.27,
+      "lat": 22.57,
+      "verified": true,
+      "note": "盐田港区"
+    },
+    {
+      "tunnelled": true,
+      "cells": 3,
+      "name": "Qingdao",
+      "lon": 120.19,
+      "lat": 36.02,
+      "verified": true,
+      "note": "前湾港区"
+    },
+    {
+      "tunnelled": true,
+      "cells": 2,
+      "name": "Busan",
+      "lon": 128.83,
+      "lat": 35.06,
+      "verified": true,
+      "note": "釜山新港"
+    },
+    {
+      "tunnelled": false,
+      "cells": 0,
+      "name": "Tianjin",
+      "lon": 117.72,
+      "lat": 38.96,
+      "verified": true,
+      "note": "北疆港区"
+    },
+    {
+      "tunnelled": true,
+      "cells": 2,
+      "name": "Xiamen",
+      "lon": 118.02,
+      "lat": 24.48,
+      "verified": true,
+      "note": "海沧港区"
+    },
+    {
+      "tunnelled": true,
+      "cells": 3,
+      "name": "Kaohsiung",
+      "lon": 120.28,
+      "lat": 22.61,
+      "verified": true,
+      "note": "中国台湾高雄港"
+    },
+    {
+      "tunnelled": true,
+      "cells": 2,
+      "name": "Laem Chabang",
+      "lon": 100.88,
+      "lat": 13.08,
+      "verified": true,
+      "note": "泰国林查班港"
+    },
+    {
+      "tunnelled": true,
+      "cells": 3,
+      "name": "Ho Chi Minh City",
+      "lon": 106.75,
+      "lat": 10.75,
+      "verified": true,
+      "note": "越南盖梅-莱拉港区"
+    },
+    {
+      "tunnelled": true,
+      "cells": 2,
+      "name": "Jakarta",
+      "lon": 106.88,
+      "lat": -6.1,
+      "verified": true,
+      "note": "丹戎不碌港"
+    },
+    {
+      "tunnelled": true,
+      "cells": 2,
+      "name": "Colombo",
+      "lon": 79.84,
+      "lat": 6.95,
+      "verified": true,
+      "note": "斯里兰卡科伦坡港"
+    },
+    {
+      "tunnelled": true,
+      "cells": 2,
+      "name": "Jebel Ali",
+      "lon": 55.06,
+      "lat": 25.01,
+      "verified": true,
+      "note": "阿联酋杰贝阿里港"
+    },
+    {
+      "tunnelled": true,
+      "cells": 2,
+      "name": "Rotterdam",
+      "lon": 4.08,
+      "lat": 51.95,
+      "verified": true,
+      "note": "马斯夫拉克特港区"
+    },
+    {
+      "tunnelled": false,
+      "cells": 0,
+      "name": "Hamburg",
+      "lon": 9.98,
+      "lat": 53.54,
+      "verified": true,
+      "note": "易北河沿岸港区"
+    },
+    {
+      "tunnelled": true,
+      "cells": 2,
+      "name": "Piraeus",
+      "lon": 23.65,
+      "lat": 37.94,
+      "verified": true,
+      "note": "希腊比雷埃夫斯港"
+    },
+    {
+      "tunnelled": false,
+      "cells": 0,
+      "name": "Los Angeles",
+      "lon": -118.26,
+      "lat": 33.74,
+      "verified": true,
+      "note": "圣佩德罗湾区"
+    },
+    {
+      "tunnelled": false,
+      "cells": 0,
+      "name": "New Jersey",
+      "lon": -74.08,
+      "lat": 40.67,
+      "verified": true,
+      "note": "纽约-新泽西港区"
+    },
+    {
+      "tunnelled": false,
+      "cells": 0,
+      "name": "Tanger Med",
+      "lon": -5.5,
+      "lat": 35.88,
+      "verified": true,
+      "note": "摩洛哥丹吉尔地中海港"
+    },
+    {
+      "tunnelled": true,
+      "cells": 2,
+      "name": "Cartagena",
+      "lon": -75.51,
+      "lat": 10.4,
+      "verified": true,
+      "note": "哥伦比亚卡塔赫纳港"
+    },
+    {
+      "tunnelled": false,
+      "cells": 0,
+      "name": "Port Klang",
+      "lon": 101.39,
+      "lat": 3.0,
+      "verified": true,
+      "note": "马来西亚巴生港"
+    },
+    {
+      "tunnelled": false,
+      "cells": 0,
+      "name": "Antwerp",
+      "lon": 4.4,
+      "lat": 51.26,
+      "verified": true,
+      "note": "斯海尔德河沿岸港区"
+    }
+  ],
+  "routeCount": 14,
+  "legCount": 70,
+  "legCacheSize": 51,
+  "failures": [],
+  "detourWarnings": [
+    {
+      "route": "S1",
+      "from": "Tanger Med",
+      "to": "Rotterdam",
+      "routeNm": 2250.1,
+      "nominalNm": 1048.0,
+      "ratio": 2.15
+    },
+    {
+      "route": "S1",
+      "from": "Rotterdam",
+      "to": "Tanger Med",
+      "routeNm": 2318.1,
+      "nominalNm": 1048.0,
+      "ratio": 2.21
+    },
+    {
+      "route": "S6",
+      "from": "Rotterdam",
+      "to": "Tanger Med",
+      "routeNm": 2318.1,
+      "nominalNm": 1048.0,
+      "ratio": 2.21
+    },
+    {
+      "route": "S6",
+      "from": "Tanger Med",
+      "to": "Rotterdam",
+      "routeNm": 2250.1,
+      "nominalNm": 1048.0,
+      "ratio": 2.15
+    }
+  ]
+}

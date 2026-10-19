@@ -6,8 +6,10 @@ polygons so the bare-globe mode still shows continents.
 
 Output: ``public/data/coastline.json`` -> ``{"lines": [[[lon, lat], ...], ...]}``
 
-Simplification uses Douglas-Peucker; tiny islands are dropped to keep the file
-small enough to ship with the app.
+Simplification uses Douglas-Peucker. The default tolerance is tuned for
+close-up viewing: 0.12 deg (~13 km) turned bays into straight chords and made
+the line disagree with the land-mask texture, which is sampled at 0.176 deg/px.
+0.02 deg (~2 km) costs about 300 KB and keeps the two aligned.
 """
 
 from __future__ import annotations
@@ -17,11 +19,12 @@ import json
 import math
 from pathlib import Path
 
-# Tolerance in degrees. 0.12 keeps continental shapes readable while cutting
-# the 50m source down by roughly an order of magnitude.
-TOLERANCE_DEG = 0.12
+# Tolerance in degrees. 0.02 deg (~2 km) is still coarse compared with the 50m
+# source, but fine enough that inlets survive at city-level zoom.
+TOLERANCE_DEG = 0.02
 # Rings whose bounding-box diagonal is below this are skipped (micro islands).
-MIN_BBOX_DIAGONAL_DEG = 0.9
+# 0.15 deg (~17 km) keeps Hong Kong / Singapore / Japanese offshore islands.
+MIN_BBOX_DIAGONAL_DEG = 0.15
 
 
 def perpendicular_distance(point, start, end):
@@ -94,6 +97,7 @@ def main() -> int:
         default=str(Path(__file__).parent.parent / "public" / "data" / "coastline.json"),
     )
     parser.add_argument("--tolerance", type=float, default=TOLERANCE_DEG)
+    parser.add_argument("--min-diagonal", type=float, default=MIN_BBOX_DIAGONAL_DEG)
     args = parser.parse_args()
 
     source = json.loads(Path(args.land).read_text(encoding="utf-8"))
@@ -107,7 +111,7 @@ def main() -> int:
             if len(ring) < 4:
                 continue
             raw_points += len(ring)
-            if bbox_diagonal(ring) < MIN_BBOX_DIAGONAL_DEG:
+            if bbox_diagonal(ring) < args.min_diagonal:
                 continue
             simplified = simplify([(float(p[0]), float(p[1])) for p in ring], args.tolerance)
             if len(simplified) < 3:

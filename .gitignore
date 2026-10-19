@@ -29,6 +29,7 @@ smoke-*.png
 # ---- 脚本生成物（由 npm run build:geo / build:coastline 重新生成，无需入库）----
 # 注意：保留同目录下的 *.csv（真实源数据）。
 public/data/*.json
+public/data/landmask.png
 public/data/stats/
 public/data/trajectory/
 

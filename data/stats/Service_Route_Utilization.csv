@@ -1,0 +1,29 @@
+Route,Name,Avg Capacity TEU,Avg Carried TEU,Utilization
+S1,Asia-Europe-NorthEurope,"65,886","4,592",6.97%
+S1-ALT-1,Asia-Europe-NorthEurope Disruption Alternative,"17,971",0,0.00%
+S1-ALT-2,Asia-Europe-NorthEurope Disruption Alternative,"17,966",0,0.00%
+S1-ALT-3,Asia-Europe-NorthEurope Disruption Alternative,"18,000",0,0.00%
+S1-ALT-6,Asia-Europe-NorthEurope Disruption Alternative,"17,985",0,0.00%
+S1-ALT-7,Asia-Europe-NorthEurope Disruption Alternative,"25,173",0,0.00%
+S10,Straits-Indonesia-Regional,730,201,27.48%
+S11,NorthEurope-Regional,661,98,14.86%
+S12,SouthChina-Straits-Regional,"2,808","1,154",41.09%
+S12-ALT-1,SouthChina-Straits-Regional Disruption Alternative,"2,787",0,0.00%
+S13,EastChina-Taiwan-Coastal,"2,223",177,7.95%
+S14,Straits-SouthChina-Regional,"1,868",546,29.24%
+S14-ALT-2,Straits-SouthChina-Regional Disruption Alternative,"2,783",0,0.00%
+S14-ALT-3,Straits-SouthChina-Regional Disruption Alternative,"2,749",0,0.00%
+S14-ALT-4,Straits-SouthChina-Regional Disruption Alternative,"2,737",0,0.00%
+S2,Intra-EastAsia,"12,476","1,057",8.47%
+S3,Mekong-Regional-Feeder,"2,359",257,10.88%
+S4,Transpacific-South,"50,954","1,043",2.05%
+S5,Asia-US-East,"88,837","1,427",1.61%
+S5-ALT-2,Asia-US-East Disruption Alternative,"12,971",0,0.00%
+S5-ALT-5,Asia-US-East Disruption Alternative,"12,898",0,0.00%
+S6,Transatlantic-Caribbean,"17,533",792,4.51%
+S6-ALT-1,Transatlantic-Caribbean Disruption Alternative,"13,899",0,0.00%
+S6-ALT-2,Transatlantic-Caribbean Disruption Alternative,"7,990",0,0.00%
+S7,IndianOcean-Gulf-EastMed,"38,428","1,353",3.52%
+S8,Indonesia-Regional-Feeder,"1,506",93,6.17%
+S9,Transpacific-North,"50,412",429,0.85%
+TOTAL,,"492,590","13,217",2.68%

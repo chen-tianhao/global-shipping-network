@@ -27,7 +27,13 @@ const EXPECTED_WARM_UP_DAYS = REAL ? 20 : 140;
 const DEBUG_PORT = 9333;
 // SwiftShader + Cesium shader compilation can take ~10 s on a cold profile;
 // 9 s made the first probe race the bootstrap and report a false "not ready".
-const WAIT_MS = 15000;
+/**
+ * Hard ceiling for start-up. Cesium compiles shaders and uploads textures on
+ * the first frame; under SwiftShader that is slow and jittery, so poll for the
+ * app handle instead of trusting one fixed sleep (a single missed window used
+ * to fail the whole run with "window.__WSC__ missing").
+ */
+const READY_TIMEOUT_MS = 45000;
 
 const profileDir = fs.mkdtempSync(path.join(os.tmpdir(), 'wsc-smoke-'));
 
@@ -144,7 +150,6 @@ try {
   await cdp.send('Log.enable');
   await cdp.send('Page.enable');
   await cdp.send('Page.navigate', { url: TARGET });
-  await sleep(WAIT_MS);
 
   const probe = async (expression) => {
     const result = await cdp.send('Runtime.evaluate', {
@@ -156,6 +161,28 @@ try {
       throw new Error(result.exceptionDetails.exception?.description ?? 'eval failed');
     }
     return result.result.value;
+  };
+
+  /**
+   * Wait for the app handle instead of sleeping a fixed amount: start-up time
+   * depends on shader compilation and texture uploads, which vary a lot on
+   * software rendering.
+   */
+  const waitForApp = async (timeoutMs = READY_TIMEOUT_MS) => {
+    const deadline = Date.now() + timeoutMs;
+    do {
+      const state = await probe(`({
+        ready: Boolean(window.__WSC__),
+        error: document.querySelector('.overlay--error')?.textContent ?? null
+      })`);
+      if (state.ready) return { ready: true };
+      // Bootstrap writes the real reason into the overlay. Stop waiting as
+      // soon as it appears: the rest of the checks assume a live app and
+      // would otherwise fail with a cascade of TypeErrors.
+      if (state.error) return { ready: false, error: state.error };
+      await sleep(400);
+    } while (Date.now() < deadline);
+    return { ready: false };
   };
 
   /**
@@ -175,10 +202,32 @@ try {
     return false;
   };
 
+  const startup = await waitForApp();
+  if (!startup.ready) {
+    const detail = startup.error
+      ? `: ${startup.error.replace(/\s+/g, ' ').slice(0, 400)}`
+      : ` within ${READY_TIMEOUT_MS} ms`;
+    console.error(`SMOKE FAILED: app did not initialise${detail}`);
+    if (pageErrors.length) {
+      console.error(`page errors:\n  ${pageErrors.join('\n  ')}`);
+    }
+    process.exit(1);
+  }
+  // Let the first frame settle: shader compilation, texture upload, fly-home.
+  await sleep(1500);
+
   const first = await probe(`
     (() => {
       const w = window.__WSC__;
-      if (!w) return { ready: false };
+      if (!w) {
+        // Surface whatever bootstrap wrote on screen: "no data at data/ports.json"
+        // is far more actionable than "window.__WSC__ missing".
+        const overlay = document.querySelector('.overlay--error');
+        return {
+          ready: false,
+          initError: overlay ? overlay.textContent : null,
+        };
+      }
       const vessels = w.layers.find((l) => l.id === 'vessels');
       const shown = vessels.primitives.filter((p) => p.show).length;
       const bar = document.querySelector('.timebar');
@@ -446,6 +495,79 @@ try {
     );
   }
 
+  // Optional close-up (`WSC_ZOOM=1`): the land wash exists so that land and
+  // sea stay distinguishable when zoomed in, and that is impossible to judge
+  // from a whole-globe screenshot.
+  if (process.env.WSC_ZOOM === '1') {
+    await probe(`
+      (() => {
+        const w = window.__WSC__;
+        const port =
+          w.model.ports.find((item) => item.id === 'shanghai') ?? w.model.ports[0];
+        w.viewer.clock.shouldAnimate = false;
+        w.viewer.camera.flyTo({
+          destination: Cesium.Cartesian3.fromDegrees(port.lon, port.lat, 900000),
+          duration: 0,
+        });
+        w.viewer.scene.requestRender();
+        return true;
+      })()
+    `);
+    await sleep(900);
+    try {
+      const zoomShot = await cdp.send('Page.captureScreenshot', { format: 'png' });
+      fs.writeFileSync(
+        path.join(process.cwd(), 'smoke-zoom.png'),
+        Buffer.from(zoomShot.data, 'base64'),
+      );
+
+      // 2x crop around the view centre: texture resolution and edge alignment
+      // are only judgeable at pixel level.
+      const detail = await cdp.send('Page.captureScreenshot', {
+        format: 'png',
+        clip: { x: 300, y: 80, width: 520, height: 360, scale: 2 },
+      });
+      fs.writeFileSync(
+        path.join(process.cwd(), 'smoke-zoom-detail.png'),
+        Buffer.from(detail.data, 'base64'),
+      );
+
+      // Same camera, wash switched off: an A/B for how much contrast the tile
+      // actually adds, and the fastest way to tell a texture artefact from a
+      // globe/shading effect.
+      await probe(`
+        (() => {
+          const w = window.__WSC__;
+          w.layers.find((layer) => layer.id === 'landwash')?.setVisible(false);
+          w.viewer.scene.requestRender();
+          return true;
+        })()
+      `);
+      await sleep(600);
+      const noWash = await cdp.send('Page.captureScreenshot', {
+        format: 'png',
+        clip: { x: 300, y: 80, width: 520, height: 360, scale: 2 },
+      });
+      fs.writeFileSync(
+        path.join(process.cwd(), 'smoke-zoom-nowash.png'),
+        Buffer.from(noWash.data, 'base64'),
+      );
+      await probe(`
+        (() => {
+          const w = window.__WSC__;
+          w.layers.find((layer) => layer.id === 'landwash')?.setVisible(true);
+          w.viewer.scene.requestRender();
+          return true;
+        })()
+      `);
+    } catch (error) {
+      console.warn(
+        'zoom screenshot skipped:',
+        error instanceof Error ? error.message : error,
+      );
+    }
+  }
+
   // Exercise the third tab (heatmap) as well; the selection above already
   // exercised the port-bar tab.
   await probe(`
@@ -512,7 +634,13 @@ try {
   }
 
   const failures = [];
-  if (!first.ready) failures.push('app did not initialise (window.__WSC__ missing)');
+  if (!first.ready) {
+    failures.push(
+      first.initError
+        ? `app did not initialise: ${first.initError.replace(/\s+/g, ' ').slice(0, 300)}`
+        : 'app did not initialise (window.__WSC__ missing)',
+    );
+  }
   if (!first.vesselShown) failures.push('no vessels are visible');
   if (first.isPlaceholder !== !REAL) {
     failures.push(

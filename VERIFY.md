@@ -9,11 +9,12 @@
 ```bash
 cd wsc-3d
 
-# 0a. 首次克隆：地理资产（需要一个能 import numpy 的 Python）
+# 0a. 首次克隆：地理资产（需要一个能 import numpy 的 Python 与 node）
 #     解析顺序：$WSC_PYTHON → .venv → 托管运行时 → PATH 上的 python。
 #     没有可用解释器时，脚本会打印修复方式而不是抛出 ModuleNotFoundError。
-npm run build:geo
-python scripts/build_coastline.py
+npm run build:geo     # 航线几何（A*，耗时最长）
+npm run build:coast   # 海岸线矢量（0.02°，1299 环 / 约 640 KB）
+npm run build:mask    # 陆海底色贴图（4096×2048，约 150 KB）
 
 # 0b. 统计数据 + 真实轨迹：Output/*.csv → public/data/stats；
 #     Output/trajectory → public/data/trajectory（含 meta.json）
@@ -50,7 +51,7 @@ npm run smoke "http://127.0.0.1:4173/?provider=real"
 | **图表面板** | 3 个页签（ATT 时序 / 港口等待 / OD 矩阵）；Plotly 首图渲染成功 |
 | **交互联动** | 时间条"下一扰动"跳到 Day 40 并暂停；图表悬停把时钟定位到 Day 120 并暂停；图表选中上海后详情面板显示 `Shanghai`，页签切到"港口等待" |
 | **相机与预热** | 4 个视角预设存在；勾选预热后时钟起点变为 `2025-08-14`（Day -140），时间条显示 `Day -140` |
-| **真实轨迹模式**（`?provider=real`） | `isPlaceholder=false`、占位横幅消失；时钟范围 `Day 0…10`；样本 36 船、Day 0.5 约 25 船可见；预热起点 `2025-12-12`（Day -20）；图表悬停夹到 Day 10 |
+| **真实轨迹模式**（`?provider=real`） | `isPlaceholder=false`、占位横幅消失；时钟范围 `Day 0…360`；43 船全部可见；预热起点 `2025-08-14`（Day -140） |
 | **渲染节流** | 暂停后 1.2 秒内 `postRender` 次数 ≤ 5（预期 0）；这项曾经必然失败——`clock.onTick` 每帧无条件 `requestRender()` |
 | 时间轴刻度 | 占位模式覆盖 2026-01-01 → 2026-12-27；真实模式覆盖 2026-01-01 → 2026-01-11 |
 | 截图 | 输出 `smoke-screenshot.png`（初始场景）与 `smoke-interaction.png`（选中上海 + 预热期后的场景） |
@@ -72,6 +73,8 @@ npm run smoke "http://127.0.0.1:4173/?provider=real"
 
 **画面**
 - [ ] 深色裸地球上有**自绘海岸线**（因为底图 = none，这是唯一能看到大陆的方式）
+- [ ] **陆地比海面明显更亮**（"陆地底色"图层）：缩放到区域级（约 900 km 高）后，仍能一眼看出哪侧是陆地
+- [ ] 左上"图层"里关掉"陆地底色"，陆地与海面恢复同色；关掉"海岸线"，边界线消失
 - [ ] 青色航线**贴着海岸走**：亚欧线绕好望角/苏伊士，跨太平洋线沿大圆航路
 - [ ] 22 个港口有圆点 + 名称，近看颜色不同（按等待 TEU 上色）
 - [ ] 船舶小点沿航线移动，颜色代表状态
@@ -135,7 +138,7 @@ npm run verify:motion       # 第二层：船舶采样是否贴着那条航线�
 ## 五、验证 P3 真实轨迹
 
 ```bash
-npm run build:data          # 默认按 20 天预热 + 10 天计测写 meta.json
+npm run build:data -- --warm-up-days=140 --measurement-days=360
 npm run preview
 # 浏览器打开：http://127.0.0.1:4173/?provider=real
 npm run smoke "http://127.0.0.1:4173/?provider=real"
@@ -143,11 +146,10 @@ npm run smoke "http://127.0.0.1:4173/?provider=real"
 
 通过时应看到：
 
-- 顶部黄色"占位数据"横幅**消失**，副标题变为 `运动：真实轨迹 -20…10`；
-- 时钟范围 `2026-01-01 → 2026-01-11`（对应 year-1 导出的第 21–30 天）；
-- 样本 36 艘船；Day 0.5 左右约 25 艘可见（其余船在该时刻没有状态区间，按设计隐藏）；
-- 预热开关显示 20 天，勾选后时钟起点 `2025-12-12`（Day -20）；
-- 图表悬停会被夹到真实轨迹上界 Day 10；
+- 顶部黄色"占位数据"横幅**消失**，副标题变为 `运动：真实轨迹 -140…360`；
+- 时钟范围 `2026-01-01 → 2026-12-27`，与占位模式一致；
+- **43 艘船全部有轨迹**（全量导出覆盖所有船），昼夜位置由 `states.csv` 驱动；
+- 预热开关显示 140 天，勾选后时钟起点 `2025-08-14`（Day -140）；
 - `SMOKE OK`，且 `isPlaceholder=false`、`hasPlaceholderWarning=false`。
 
 **时间与位置口径**
@@ -156,22 +158,25 @@ npm run smoke "http://127.0.0.1:4173/?provider=real"
 - `states.csv` 的 `sailing` 区间按 `voyages.csv` 的离港/到港时间在对应航段几何上插值；
   `queuing` / `served` 停在港口锚点。
 - `meta.json` 的 `measurementStartIso` 由 `build-data.mjs` 按 `--warm-up-days` 生成；
-  默认样本为 `0001-01-21T00:00:00`。
-- 完整 360 天轨迹：`python export_trajectory.py --warmup 140 --days 360`（约 60 分钟），
-  然后 `npm run build:data -- --warm-up-days=140 --measurement-days=360`。
+  本次全量导出的口径为 `0001-05-21T00:00:00`（140 天预热）。
+- 全量轨迹已导出：`python export_trajectory.py --warmup 140 --days 360`（实测 95 分钟，6,766 航次 / 20,425 个状态区间，约 2 MB），
+  前端资产用 `npm run build:data -- --warm-up-days=140 --measurement-days=360` 生成。
 
 ---
 
 ## 六、已知边界（读结果时别误判）
 
 - 默认运动来自 `PlaceholderMotionProvider`：等速巡航、无排队/靠泊/扰动响应，**只用于打通渲染链路**；`?provider=real` 才使用导出轨迹。
-- 当前真实轨迹样本为 **20 天预热 + 10 天计测、36 艘船、270 段航程、916 个状态区间**；它来自 `Output/trajectory`，不是完整 360 天。完整导出与分块见 `TODO.md`。
+- 当前真实轨迹为**全量导出**：140 天预热 + 360 天计测、43 艘船、6,766 个航次、20,425 个状态区间，两个 CSV 合计约 2 MB，**不需要分块**（这也是 TODO 里分块项的结论）。
 - 导出不携带 service route id，因此真实轨迹的 `routeId` 为 null：HUD 船舶详情里"所属航线"显示 `—`，冒烟的贴线检查会跳过这些船（但位置仍按 `routes.json` 的航段几何插值）。
 - `queuing` / `served` 的位置是港口锚点，不是泊位级位置。
-- `states.csv` 中部分 `queuing`/`served` 行的 `Port` 为空（导出侧在初始状态/未关联 segment 时取不到），这些区间前端只能隐藏；因此真实样本 36 船中 Day 0.5 只有约 25 船可见。补全项见 `TODO.md`。
-- 统计数据（ATT/港口等待/OD）来自 **360 天**仿真输出，而真实轨迹样本只有 10 个计测日；图表面板仍显示全程统计，时钟悬停会夹到轨迹上界。
+- `states.csv` 中 `sailing` 行的 `Port` 为空是正常的（船在海上）；另有 43 条 `queuing` / 49 条 `served`（初始状态，未关联 segment）缺港口名，这些区间只能隐藏。全量样本下 43 艘船在 Day 0.5 均已可见，影响可忽略；补全项仍记在 `TODO.md`。
+- 统计数据（ATT/港口等待/OD）与轨迹现在都来自**同一批 360 天**运行，时间口径已对齐。
 - 占位轨迹按 **1 小时**采样（43 船 × 8,641 帧 ≈ 37 万点）。渲染层在帧间做直线插值，急弯处的切角约 3 nm，冒烟阈值设为 10 nm；若要进一步压到 1 nm 以内，可把步长减半，代价是内存翻倍。
-- 底图 = none，所以画面只有自绘海岸线；接入你自己的地图服务后，海岸线图层会自动保持关闭状态以外的默认（可在左下角手动关）。
+- 底图 = none，所以画面只有自绘海岸线 + 陆海底色；接入你自己的地图服务后，这两层会自动关闭（也可在左下角手动开关），避免盖住影像。
+- **陆地底色是单张 4096×2048 等经纬贴图**（约 10 km/px，GPU 约 32 MB）：区域级缩放够用，城市级再放大仍会看到软过渡；精确边界始终由矢量海岸线承担。
+- 贴图由 Natural Earth `land` 生成，**不含湖泊**：五大湖、里海以外的内陆湖会被当作陆地着色（里海在源数据里是唯一一个孔洞，已正确挖空）。
+- 海岸线矢量已提到 0.02°（1299 环 / 34,770 点 / 640 KB，gzip 后约 250 KB），足够与贴图对齐；再细就会超过 Natural Earth 50m 本身的精度。
 - 4 条 Tanger Med↔Rotterdam 相关航段的"绕行比 > 2"警告是正常的：其名义航段本身横穿欧洲大陆，几何上必须绕行。
 - 图表使用 vendored `public/vendor/plotly.min.js`（4.5 MB，懒加载）。首次打开"统计图表"时可能有一两秒的"正在加载图表库"提示；不阻塞三维启动。
 - "港口等待"是全程均值，"OD 矩阵"是平均在途 TEU；只有 ATT 是时序。港口等待时序需要仿真侧新增按区间快照导出（见 `TODO.md`）。
@@ -179,3 +184,64 @@ npm run smoke "http://127.0.0.1:4173/?provider=real"
 - **暂停时画面不再重绘**（`requestRenderMode` 现在真的生效）：拖动时间轴、切换图层、移动相机都会各自请求一帧，所以视觉上没有差别；但如果你在控制台用 `toDataURL()` 抓图，会得到空帧——`preserveDrawingBuffer` 已关闭，截图请用浏览器截图或 `npm run smoke`（走合成器捕获，不受影响）。
 - **Credit 容器**在底图为 `none` 时被折叠（没有可署名内容）；接入瓦片源后会自动恢复显示，`src/cesium/baseLayer/README.md` 里要求保留的 attribution 因此不会被吞掉。
 - **WebGL 上下文丢失**时画面中央会出现"渲染上下文丢失，正在尝试恢复 …"提示；恢复后自动消失并重绘一帧。
+
+---
+
+## 七、部署（静态站点）
+
+构建产物是纯静态的，把 `dist/` 的**内容**整体上传即可。关键只有一条：`data/` 必须和 `index.html` **同级**。
+
+```text
+<站点根>/
+├── index.html
+├── assets/                  # JS / CSS（带 hash）
+├── cesium/                  # Cesium 运行时
+├── vendor/plotly.min.js     # 图表库（懒加载）
+└── data/
+    ├── ports.json
+    ├── routes.json
+    ├── route_plan.csv
+    ├── vessel_classes.csv
+    ├── coastline.json       # 可选：海岸线矢量
+    ├── landmask.png         # 可选：陆海底色
+    ├── stats/*.csv          # 7 个统计表
+    └── trajectory/          # 可选：真实轨迹
+        ├── meta.json
+        ├── voyages.csv
+        └── states.csv
+```
+
+**路径解析规则**
+
+- `dataBaseUrl` 默认是 `data`，**相对当前页面 URL** 解析。站点是 `https://host/ship/` → 请求 `https://host/ship/data/...`。
+- 放在子路径时**务必带结尾斜杠**访问：`/ship/`。`/ship` 会被解析成站点根，`assets` 和 `data` 全部 404（多数静态服务器会自动 301，但反向代理未必）。
+- 数据放在别处（CDN / 对象存储）时：
+  - URL 覆盖：`?data=https://cdn.example.com/wsc/`
+  - 或在 `index.html` 的模块脚本**之前**：`<script>window.WSC_CONFIG = { dataBaseUrl: 'https://cdn.example.com/wsc' }</script>`
+
+**最容易踩的坑：生成物被 git 忽略**
+
+`public/data` 下的 `*.json`、`stats/`、`trajectory/`、`landmask.png` 都是脚本产物，**不在版本控制里**。所以"从 git 拉代码 → `vite build` → 部署"的流水线打出来的包**没有数据**，上线后就会报：
+
+```text
+SyntaxError: Unexpected token '<', "<!doctype "... is not valid JSON
+```
+
+因为静态服务器对缺失路径回退到 `index.html`，返回 200 + HTML。流水线里必须补：
+
+```bash
+npm run build:geo      # routes.json / ports.json
+npm run build:coast    # coastline.json
+npm run build:mask     # landmask.png
+npm run build:data -- --warm-up-days=140 --measurement-days=360
+npm run build          # 末尾自动跑 check:dist
+```
+
+`npm run check:dist` 会逐项检查 `dist/data` 是否存在、是否为空、JSON 是否真的是 JSON；缺任何必需文件都会直接失败并打印补哪一步。也可以单独跑：`npm run check:dist`。
+
+**线上仍报这个错时的 30 秒定位**
+
+在浏览器直接打开 `https://host/.../data/ports.json`：
+
+- 看到 JSON → 数据没问题，检查是不是 `?data=` 指错了目录；
+- 看到 `<!doctype html>` → 该路径**没有文件**，服务器回退到了首页。对照上面的目录树补文件。

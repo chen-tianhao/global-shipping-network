@@ -22,6 +22,8 @@ export interface AppConfig {
   baseLayerConfig: BaseLayerRuntimeConfig;
   /** Draw the local coastline asset (only meaningful with the none base map). */
   showCoastline: boolean;
+  /** Tint land from the local mask tile (only meaningful with the none map). */
+  showLandWash: boolean;
   /** Full motion range, including the warm-up period. */
   dataRange: TimeRange;
   /** Visible clock range; the warm-up is folded unless `showWarmUp` is set. */
@@ -43,6 +45,7 @@ export interface RuntimeConfig {
   days?: number | string;
   multiplier?: number | string;
   coastline?: boolean;
+  landWash?: boolean;
   autoPlay?: boolean;
   warmUp?: boolean;
   warmUpDays?: number | string;
@@ -93,6 +96,11 @@ export function resolveConfig(): AppConfig {
     showCoastline:
       firstBool(params.get('coastline'), declared.coastline) ??
       // A tile base map already shows continents, so the outline is redundant.
+      baseLayerId === 'none',
+    showLandWash:
+      firstBool(params.get('landwash'), declared.landWash) ??
+      // Same rule as the coastline: an imagery base map already answers
+      // "which side is land", and the wash would paint over it.
       baseLayerId === 'none',
     dataRange,
     timeRange,
