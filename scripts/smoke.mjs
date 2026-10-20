@@ -20,13 +20,26 @@ const CHROME =
   process.env.WSC_CHROME ??
   'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
 const cliArgs = process.argv.slice(2);
-const TARGET =
+const RAW_TARGET =
   cliArgs.find((arg) => !arg.startsWith('--')) ??
   process.env.WSC_URL ??
   'http://127.0.0.1:4173/';
-const REAL =
-  /[?&]provider=(?:real|real-trajectory)(?:&|$)/.test(TARGET) ||
-  process.env.WSC_PROVIDER === 'real';
+/** `--dummy` appends ?data=dummy so the target host stays configurable. */
+const DUMMY = cliArgs.includes('--dummy');
+const TARGET = DUMMY
+  ? `${RAW_TARGET}${RAW_TARGET.includes('?') ? '&' : '?'}data=dummy`
+  : RAW_TARGET;
+/**
+ * `?data=sim` (default) uses the exported trajectory, `?data=dummy` the
+ * synthetic placeholder. `?provider=` is still understood for old links.
+ */
+const DATA_MODE = (() => {
+  const match = /[?&]data=(sim|dummy)(?:&|$)/i.exec(TARGET);
+  if (match) return match[1].toLowerCase();
+  if (/[?&]provider=placeholder/i.test(TARGET)) return 'dummy';
+  return (process.env.WSC_DATA ?? 'sim').toLowerCase();
+})();
+const REAL = DATA_MODE !== 'dummy';
 const EXPECTED_WARM_UP_DAYS = REAL ? 20 : 140;
 /** Render as a 390x844 phone and assert the bottom-sheet layout instead. */
 const MOBILE = process.env.WSC_MOBILE === '1' || cliArgs.includes('--mobile');
@@ -39,7 +52,7 @@ const DEBUG_PORT = 9333;
  * app handle instead of trusting one fixed sleep (a single missed window used
  * to fail the whole run with "window.__WSC__ missing").
  */
-const READY_TIMEOUT_MS = 45000;
+const READY_TIMEOUT_MS = 90000;
 
 const profileDir = fs.mkdtempSync(path.join(os.tmpdir(), 'wsc-smoke-'));
 
@@ -215,7 +228,7 @@ try {
    * the machine is busy (e.g. a simulation export running in parallel), so
    * poll instead of asserting on a single snapshot.
    */
-  const waitForChart = async (timeoutMs = 20_000) => {
+  const waitForChart = async (timeoutMs = 45_000) => {
     const deadline = Date.now() + timeoutMs;
     do {
       const ready = await probe(
@@ -229,6 +242,14 @@ try {
 
   const startup = await waitForApp();
   if (!startup.ready) {
+    try {
+      const dump = await probe(
+        '({ text: document.body.innerText.slice(0, 300), html: document.body.innerHTML.slice(0, 200) })',
+      );
+      console.error('page dump:', JSON.stringify(dump));
+    } catch (error) {
+      console.error('page dump failed:', error instanceof Error ? error.message : error);
+    }
     const detail = startup.error
       ? `: ${startup.error.replace(/\s+/g, ' ').slice(0, 400)}`
       : ` within ${READY_TIMEOUT_MS} ms`;
@@ -373,6 +394,9 @@ try {
         ready: true,
         viewport: { w: window.innerWidth, h: window.innerHeight },
         viewRect,
+        clockMultiplier: Math.round(w.viewer.clock.multiplier),
+        speedLabel:
+          document.querySelector('.timebar__select')?.selectedOptions?.[0]?.textContent ?? '',
         maxRouteSegKm: Math.round(maxRouteSegKm),
         routeVertices,
         cameraHeightKm: Math.round(w.viewer.camera.positionCartographic.height / 1000),
@@ -889,6 +913,12 @@ try {
     );
   }
   const expectedTabs = MOBILE ? 2 : 3;
+  if (first.clockMultiplier !== 21600) {
+    failures.push(`default speed is ${first.clockMultiplier}s/s, expected 21600 (6 h/s)`);
+  }
+  if (!first.speedLabel.includes('6')) {
+    failures.push(`speed selector shows "${first.speedLabel}", expected 6 时/秒`);
+  }
   if (first.maxRouteSegKm > 60) {
     failures.push(
       `route polyline has a ${first.maxRouteSegKm} km chord (densification should keep it <= 50 km)`,

@@ -41,6 +41,8 @@ export interface RuntimeConfig {
   apiKey?: string;
   tileUrl?: string;
   dataBaseUrl?: string;
+  /** `sim` (default) or `dummy`. */
+  dataMode?: string;
   providerId?: string;
   days?: number | string;
   multiplier?: number | string;
@@ -60,15 +62,40 @@ declare global {
 
 const DEFAULT_DAYS = 360;
 const DEFAULT_WARM_UP_DAYS = 140;
+/** 6 simulation hours per wall-clock second. */
+const DEFAULT_CLOCK_MULTIPLIER = 6 * 3600;
+
+/**
+ * `?data=sim` (default) uses the exported simulation trajectory,
+ * `?data=dummy` the synthetic placeholder. `?provider=` is still accepted so
+ * links shared before the switch keep working.
+ */
+function resolveMotionId(mode: string | undefined, legacy: string | undefined): string {
+  const value = (mode ?? '').trim().toLowerCase();
+  if (value === 'dummy' || value === 'placeholder' || value === 'fake') {
+    return 'placeholder-motion';
+  }
+  if (value === 'sim' || value === 'real' || value === 'trajectory') {
+    return 'real-trajectory';
+  }
+  if (value) {
+    console.warn(`[config] unknown data mode "${mode}", falling back to sim`);
+  }
+
+  const legacyValue = (legacy ?? '').trim().toLowerCase();
+  if (legacyValue.startsWith('placeholder')) return 'placeholder-motion';
+  return 'real-trajectory';
+}
 
 export function resolveConfig(): AppConfig {
   const params = new URLSearchParams(window.location.search);
   const declared = { ...(window.WSC_CONFIG ?? {}), ...(window.WSC_MAP_CONFIG ?? {}) };
 
   const baseLayerId = firstString(params.get('baseLayer'), declared.baseLayer) ?? 'none';
-  const providerId =
-    firstString(params.get('provider'), declared.providerId) ??
-    'placeholder-motion';
+  const providerId = resolveMotionId(
+    firstString(params.get('data'), declared.dataMode),
+    firstString(params.get('provider'), declared.providerId),
+  );
   const days = firstNumber(params.get('days'), declared.days) ?? DEFAULT_DAYS;
   const warmUpDays = Math.max(
     0,
@@ -86,7 +113,8 @@ export function resolveConfig(): AppConfig {
   };
 
   return {
-    dataBaseUrl: firstString(params.get('data'), declared.dataBaseUrl) ?? 'data',
+    // `data` now selects sim/dummy, so the asset directory moved to `dataUrl`.
+    dataBaseUrl: firstString(params.get('dataUrl'), declared.dataBaseUrl) ?? 'data',
     providerId,
     baseLayerId,
     baseLayerConfig: {
@@ -106,7 +134,9 @@ export function resolveConfig(): AppConfig {
     timeRange,
     warmUpDays,
     showWarmUp,
-    clockMultiplier: firstNumber(params.get('multiplier'), declared.multiplier) ?? 3600,
+    clockMultiplier:
+      firstNumber(params.get('multiplier'), declared.multiplier) ??
+      DEFAULT_CLOCK_MULTIPLIER,
     autoPlay: firstBool(params.get('autoPlay'), declared.autoPlay) ?? true,
   };
 }

@@ -33,9 +33,14 @@ npm run smoke
 # 4. 运动几何复核（大圆插值 / 跨经线 / 相机跨度）
 npm run verify:motion
 
-# 5. P3 真实轨迹模式冒烟（先完成第 0 步）
-npm run smoke "http://127.0.0.1:4173/?provider=real"
+# 5. 数据源冒烟（先完成第 0 步）：缺省 = 仿真轨迹，?data=dummy = 占位数据
+npm run smoke              # 同 ?data=sim
+npm run smoke:dummy        # 同 ?data=dummy
 ```
+
+> 预览若绑定到具体网卡（例如 Tailscale 的 `100.85.181.126`），冒烟必须显式传地址：
+> `npm run smoke "http://100.85.181.126:4173/"`，占位模式加 `--dummy`：
+> `npm run smoke:dummy "http://100.85.181.126:4173/"`。
 
 `npm run smoke` 会真实启动 Chromium 打开页面，自动检查并**打印结论**：
 
@@ -51,7 +56,7 @@ npm run smoke "http://127.0.0.1:4173/?provider=real"
 | **图表面板** | 3 个页签（ATT 时序 / 港口等待 / OD 矩阵）；Plotly 首图渲染成功 |
 | **交互联动** | 时间条"下一扰动"跳到 Day 40 并暂停；图表悬停把时钟定位到 Day 120 并暂停；图表选中上海后详情面板显示 `Shanghai`，页签切到"港口等待" |
 | **相机与预热** | 4 个视角预设存在；勾选预热后时钟起点变为 `2025-08-14`（Day -140），时间条显示 `Day -140` |
-| **真实轨迹模式**（`?provider=real`） | `isPlaceholder=false`、占位横幅消失；时钟范围 `Day 0…360`；43 船全部可见；预热起点 `2025-08-14`（Day -140） |
+| **仿真数据模式**（`?data=sim`，缺省） | `isPlaceholder=false`、占位横幅消失；时钟范围 `Day 0…360`；43 船全部可见；预热起点 `2025-08-14`（Day -140） |
 | **航线弧线** | 渲染前按 ≤50 km 加密，最长弦 50 km；断言 `maxRouteSegKm ≤ 60`、顶点数 ≥ 3000。未加密时最长弦 8,787 km、下沉 1,757 km |
 | **航线几何** | `verify:geo` 70 段 0 穿越；`routes.json` 顶点 424、中位段长 190 km；45° 网格占比 18%（简化前 68%） |
 | **渲染节流** | 暂停后 1.2 秒内 `postRender` 次数 ≤ 5（预期 0）；这项曾经必然失败——`clock.onTick` 每帧无条件 `requestRender()` |
@@ -142,8 +147,10 @@ npm run verify:motion       # 第二层：船舶采样是否贴着那条航线�
 ```bash
 npm run build:data -- --warm-up-days=140 --measurement-days=360
 npm run preview
-# 浏览器打开：http://127.0.0.1:4173/?provider=real
-npm run smoke "http://127.0.0.1:4173/?provider=real"
+# 浏览器打开：http://127.0.0.1:4173/          （缺省即 ?data=sim）
+# 占位数据对比：http://127.0.0.1:4173/?data=dummy
+npm run smoke              # 缺省 = 仿真
+npm run smoke:dummy        # 占位数据
 ```
 
 通过时应看到：
@@ -168,7 +175,7 @@ npm run smoke "http://127.0.0.1:4173/?provider=real"
 
 ## 六、已知边界（读结果时别误判）
 
-- 默认运动来自 `PlaceholderMotionProvider`：等速巡航、无排队/靠泊/扰动响应，**只用于打通渲染链路**；`?provider=real` 才使用导出轨迹。
+- **缺省使用仿真轨迹**（`?data=sim`）；`?data=dummy` 切到 `PlaceholderMotionProvider`（等速巡航、无排队/靠泊/扰动响应，只用于打通渲染链路）。
 - 当前真实轨迹为**全量导出**：140 天预热 + 360 天计测、43 艘船、6,766 个航次、20,425 个状态区间，两个 CSV 合计约 2 MB，**不需要分块**（这也是 TODO 里分块项的结论）。
 - 导出不携带 service route id，因此真实轨迹的 `routeId` 为 null：HUD 船舶详情里"所属航线"显示 `—`，冒烟的贴线检查会跳过这些船（但位置仍按 `routes.json` 的航段几何插值）。
 - `queuing` / `served` 的位置是港口锚点，不是泊位级位置。
@@ -250,7 +257,7 @@ Windows 防火墙需要放行 `node.exe` 入站（本机 Private/Public 已有 N
 - `dataBaseUrl` 默认是 `data`，**相对当前页面 URL** 解析。站点是 `https://host/ship/` → 请求 `https://host/ship/data/...`。
 - 放在子路径时**务必带结尾斜杠**访问：`/ship/`。`/ship` 会被解析成站点根，`assets` 和 `data` 全部 404（多数静态服务器会自动 301，但反向代理未必）。
 - 数据放在别处（CDN / 对象存储）时：
-  - URL 覆盖：`?data=https://cdn.example.com/wsc/`
+  - URL 覆盖：`?dataUrl=https://cdn.example.com/wsc/`
   - 或在 `index.html` 的模块脚本**之前**：`<script>window.WSC_CONFIG = { dataBaseUrl: 'https://cdn.example.com/wsc' }</script>`
 
 **最容易踩的坑：生成物被 git 忽略**
@@ -277,7 +284,7 @@ npm run build          # 末尾自动跑 check:dist
 
 在浏览器直接打开 `https://host/.../data/ports.json`：
 
-- 看到 JSON → 数据没问题，检查是不是 `?data=` 指错了目录；
+- 看到 JSON → 数据没问题，检查是不是 `?dataUrl=` 指错了目录；
 - 看到 `<!doctype html>` → 该路径**没有文件**，服务器回退到了首页。对照上面的目录树补文件。
 
 ---

@@ -16,6 +16,7 @@
     "build:coast": "node scripts/run-python.mjs scripts/build_coastline.py",
     "smoke": "node scripts/smoke.mjs",
     "smoke:mobile": "node scripts/smoke.mjs --mobile",
+    "smoke:dummy": "node scripts/smoke.mjs --dummy",
     "build:geo": "node scripts/run-python.mjs scripts/build_geo.py --input ../WSC_SimulationChallenge_2026/SimulationChallenge2026_Py/Input",
     "verify:geo": "node scripts/run-python.mjs scripts/verify_geo.py",
     "verify:motion": "node scripts/verify_motion.mjs"
