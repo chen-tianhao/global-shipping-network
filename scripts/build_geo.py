@@ -27,6 +27,7 @@ from pathlib import Path
 import numpy as np
 
 from geo_math import (
+    distance_nm,
     interpolate as great_circle_interpolate,
     polyline_length_nm as geo_polyline_length_nm,
     sample_count,
@@ -356,8 +357,12 @@ def find_sea_route(mask: OceanMask, start, goal, heuristic_weight: float = 1.15)
 # 4. Simplification with a hard land-crossing guard
 # ---------------------------------------------------------------------------
 
-def _segment_is_over_water(mask: OceanMask, a, b, min_samples: int = 64) -> bool:
+def _segment_is_over_water(mask: OceanMask, a, b, min_samples: int = 400) -> bool:
     """Sample a segment densely enough to catch every land cell it crosses.
+
+    The sample budget must be at least as dense as verify_over_water, otherwise
+    a shortcut can pass here and fail there, and the whole leg falls back to the
+    raw 28 km grid path - which is exactly what used to make every route dense.
 
     The walk MUST follow the great circle, because that is the curve the
     renderer draws (Cesium polylines are geodesic). Linear lon/lat
@@ -390,6 +395,97 @@ def simplify_over_water(mask: OceanMask, points):
         out.append(points[best])
         index = best
     return out
+
+
+# Douglas-Peucker tolerance. 1.5 km is below the 0.25 deg (~28 km) grid the
+# route was searched on, so it can only remove vertices that add no shape.
+RDP_TOLERANCE_KM = 1.5
+
+
+def _perpendicular_deg(point, start, end, cos_lat: float) -> float:
+    """Distance from point to the chord, in degrees of latitude.
+
+    A local equirectangular projection is enough at 1-2 km tolerances and
+    keeps this dependency-free.
+    """
+    px, py = point[0] * cos_lat, point[1]
+    ax, ay = start[0] * cos_lat, start[1]
+    bx, by = end[0] * cos_lat, end[1]
+    dx, dy = bx - ax, by - ay
+    if dx == 0 and dy == 0:
+        return math.hypot(px - ax, py - ay)
+    t = ((px - ax) * dx + (py - ay) * dy) / (dx * dx + dy * dy)
+    t = max(0.0, min(1.0, t))
+    return math.hypot(px - (ax + t * dx), py - (ay + t * dy))
+
+
+def _rdp_indices(points, tolerance_deg: float):
+    """Indices kept by Douglas-Peucker, closed rings handled explicitly."""
+    count = len(points)
+    if count < 3:
+        return list(range(count))
+
+    cos_lat = math.cos(math.radians(sum(point[1] for point in points) / count))
+    keep = [False] * count
+    keep[0] = keep[-1] = True
+
+    if distance_nm(points[0], points[-1]) < 1e-3:
+        # A closed ring first/last chord is degenerate; split at the vertex
+        # farthest from the start so both halves are ordinary polylines.
+        far = max(range(1, count), key=lambda i: distance_nm(points[0], points[i]))
+        stack = [(0, far), (far, count - 1)]
+    else:
+        stack = [(0, count - 1)]
+
+    while stack:
+        a, b = stack.pop()
+        if b - a < 2:
+            continue
+        worst = -1.0
+        index = -1
+        for i in range(a + 1, b):
+            distance = _perpendicular_deg(points[i], points[a], points[b], cos_lat)
+            if distance > worst:
+                worst, index = distance, i
+        if worst > tolerance_deg and index > 0:
+            keep[index] = True
+            stack.append((a, index))
+            stack.append((index, b))
+
+    return [i for i, flagged in enumerate(keep) if flagged]
+
+
+def simplify_rdp_over_water(mask, points, tolerance_km: float = RDP_TOLERANCE_KM):
+    """Drop redundant vertices, but never at the cost of a land crossing.
+
+    simplify_over_water aborts a merge as soon as one cell near the chord is
+    land, so it leaves long collinear runs behind: one vertex per 28 km grid
+    cell even in open ocean. RDP removes those. Every accepted shortcut is
+    then re-tested with the same ocean-mask sampler; if it fails, the span is
+    halved and retried with the original vertex, so the final line is
+    water-clear by exactly the same test that accepted the input.
+    """
+    if len(points) <= 3:
+        return list(points)
+
+    keep = _rdp_indices(points, tolerance_km / 111.32)
+    if len(keep) < 2:
+        return list(points)
+
+    kept = [keep[0]]
+    pending = keep[1:]
+    while pending:
+        candidate = pending[0]
+        current = kept[-1]
+        if candidate - current <= 1 or _segment_is_over_water(
+            mask, points[current], points[candidate]
+        ):
+            kept.append(candidate)
+            pending.pop(0)
+        else:
+            pending.insert(0, (current + candidate) // 2)
+
+    return [points[i] for i in kept]
 
 
 def polyline_length_nm(points) -> float:
@@ -538,6 +634,7 @@ def main() -> int:
                 raw[0] = [port_lookup[from_port][0], port_lookup[from_port][1]]
                 raw[-1] = [port_lookup[to_port][0], port_lookup[to_port][1]]
                 simplified = simplify_over_water(mask, raw)
+                simplified = simplify_rdp_over_water(mask, simplified)
                 crossings = verify_over_water(mask, simplified)
                 if crossings:
                     # Shortcuts are a rendering optimisation only; correctness

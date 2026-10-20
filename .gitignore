@@ -23,6 +23,10 @@ vite.config.ts.timestamp-*
 /assets/
 /cesium/
 
+# ---- Python 缓存（build_geo / verify_geo 会产生）----
+__pycache__/
+*.pyc
+
 # ---- 包管理器本地缓存（npm install 用 --cache ./.npm-cache 落盘）----
 .npm-cache/
 

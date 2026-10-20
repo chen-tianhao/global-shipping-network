@@ -53,6 +53,7 @@ npm run smoke "http://127.0.0.1:4173/?provider=real"
 | **相机与预热** | 4 个视角预设存在；勾选预热后时钟起点变为 `2025-08-14`（Day -140），时间条显示 `Day -140` |
 | **真实轨迹模式**（`?provider=real`） | `isPlaceholder=false`、占位横幅消失；时钟范围 `Day 0…360`；43 船全部可见；预热起点 `2025-08-14`（Day -140） |
 | **航线弧线** | 渲染前按 ≤50 km 加密，最长弦 50 km；断言 `maxRouteSegKm ≤ 60`、顶点数 ≥ 3000。未加密时最长弦 8,787 km、下沉 1,757 km |
+| **航线几何** | `verify:geo` 70 段 0 穿越；`routes.json` 顶点 424、中位段长 190 km；45° 网格占比 18%（简化前 68%） |
 | **渲染节流** | 暂停后 1.2 秒内 `postRender` 次数 ≤ 5（预期 0）；这项曾经必然失败——`clock.onTick` 每帧无条件 `requestRender()` |
 | 时间轴刻度 | 占位模式覆盖 2026-01-01 → 2026-12-27；真实模式覆盖 2026-01-01 → 2026-01-11 |
 | 截图 | 输出 `smoke-screenshot.png`（初始场景）与 `smoke-interaction.png`（选中上海 + 预热期后的场景） |
@@ -182,6 +183,7 @@ npm run smoke "http://127.0.0.1:4173/?provider=real"
 - 图表使用 vendored `public/vendor/plotly.min.js`（4.5 MB，懒加载）。首次打开"统计图表"时可能有一两秒的"正在加载图表库"提示；不阻塞三维启动。
 - "港口等待"是全程均值，"OD 矩阵"是平均在途 TEU；只有 ATT 是时序。港口等待时序需要仿真侧新增按区间快照导出（见 `TODO.md`）。
 - 预热期（占位模式 Day -140 ~ -1 / 真实模式 Day -20 ~ -1）的船舶位置同样来自对应 provider；占位模式的预热位置不代表真实行为。
+- **航线几何已做过 RDP 简化**（容差 1.5 km）：全库 424 个顶点、中位段长 190 km。简化时的"是否过水"采样必须与 `verify_over_water` 同密度（400），否则会出现"简化通过、验证失败"→ 整条腿回退到 28 km 网格，这正是之前折线密集的根因。
 - **航线是"加密后的弦"，不是真正的测地线图元**：`PolylineCollection` 的 `Polyline` 没有 `arcType`（传入会被静默忽略），所以 `RouteLayer` 与拥堵航段在提交前用 `densifyGreatCircle` 按 50 km 采样（弦误差 49 m），并去掉首尾重复点、用 `loop` 闭合。全库 5,767 个顶点。
 - **暂停时画面不再重绘**（`requestRenderMode` 现在真的生效）：拖动时间轴、切换图层、移动相机都会各自请求一帧，所以视觉上没有差别；但如果你在控制台用 `toDataURL()` 抓图，会得到空帧——`preserveDrawingBuffer` 已关闭，截图请用浏览器截图或 `npm run smoke`（走合成器捕获，不受影响）。
 - **Credit 容器**在底图为 `none` 时被折叠（没有可署名内容）；接入瓦片源后会自动恢复显示，`src/cesium/baseLayer/README.md` 里要求保留的 attribution 因此不会被吞掉。

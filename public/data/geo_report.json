@@ -222,17 +222,17 @@
       "route": "S1",
       "from": "Rotterdam",
       "to": "Tanger Med",
-      "routeNm": 2318.1,
+      "routeNm": 2227.2,
       "nominalNm": 1048.0,
-      "ratio": 2.21
+      "ratio": 2.13
     },
     {
       "route": "S6",
       "from": "Rotterdam",
       "to": "Tanger Med",
-      "routeNm": 2318.1,
+      "routeNm": 2227.2,
       "nominalNm": 1048.0,
-      "ratio": 2.21
+      "ratio": 2.13
     },
     {
       "route": "S6",
