@@ -41,6 +41,7 @@ body,
 #ui-root .hud,
 #ui-root .timebar,
 #ui-root .chart-panel,
+#ui-root .mobile-sheet,
 #ui-root .overlay {
   pointer-events: auto;
 }
@@ -427,4 +428,218 @@ body,
 
 .cesium-viewer-timelineContainer {
   bottom: 8px;
+}
+
+/* ---- locate action ------------------------------------------------------ */
+
+.details__locate {
+  display: block;
+  width: 100%;
+  margin: 2px 0 8px;
+  padding: 6px 10px;
+  border: 1px solid rgba(76, 201, 240, 0.35);
+  border-radius: 6px;
+  background: rgba(76, 201, 240, 0.14);
+  color: var(--text);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.details__locate:hover {
+  background: rgba(76, 201, 240, 0.26);
+}
+
+/* ---- mobile (<=640px) --------------------------------------------------- */
+
+@media (max-width: 640px) {
+  /* iOS地址栏收起/展开会改变 100vh，dvh 才是可见高度 */
+  #app {
+    height: 100dvh;
+  }
+
+  /* Status strip: full width, compact */
+  .hud--top {
+    top: calc(8px + env(safe-area-inset-top));
+    left: 10px;
+    right: 10px;
+    max-width: none;
+    padding: 8px 12px;
+    border-radius: 12px;
+  }
+
+  .hud__title {
+    font-size: 14px;
+  }
+
+  .hud__subtitle {
+    margin-top: 2px;
+    font-size: 10px;
+  }
+
+  /* Keep the honesty banner, but one line instead of four */
+  .hud__warn {
+    margin-top: 6px;
+    padding: 4px 6px;
+    font-size: 10px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* Time bar: above the sheet handle, one compact row */
+  .timebar {
+    top: auto;
+    bottom: calc(56px + env(safe-area-inset-bottom));
+    left: 10px;
+    right: 10px;
+    transform: none;
+    gap: 6px;
+    padding: 6px 8px;
+    border-radius: 12px;
+    backdrop-filter: none;
+  }
+
+  .timebar__select {
+    display: none;
+  }
+
+  .timebar__button {
+    min-width: 48px;
+    padding: 9px 10px;
+  }
+
+  .timebar__slider {
+    flex: 1;
+    width: auto;
+    min-width: 0;
+  }
+
+  .timebar__readout {
+    min-width: 0;
+    font-size: 10px;
+    white-space: nowrap;
+  }
+
+  /* Bottom sheet. Collapsed leaves the 56px handle visible. */
+  .mobile-sheet {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 30;
+    display: flex;
+    flex-direction: column;
+    /* Collapsed = exactly the dock (handle + time bar + safe area), measured
+       in JS. Animating height instead of a translate keeps the dock flush with
+       the bottom edge even if the measurement lands a frame late. */
+    height: var(--dock-height, 115px);
+    padding-bottom: env(safe-area-inset-bottom);
+    border-top: 1px solid var(--panel-border);
+    border-radius: 16px 16px 0 0;
+    background: rgba(9, 20, 34, 0.97);
+    overflow: hidden;
+    transition: height 220ms ease;
+  }
+
+  .mobile-sheet.is-open {
+    height: 72vh;
+    height: min(72dvh, 620px);
+  }
+
+  .mobile-sheet__handle {
+    position: relative;
+    flex: none;
+    height: 56px;
+    padding: 16px 12px 8px;
+    border: 0;
+    background: transparent;
+    color: var(--text-dim);
+    font-size: 12px;
+    /* The handle is a drag surface: no scroll or browser panning on it. */
+    touch-action: none;
+    cursor: grab;
+  }
+
+  /* Fixed strip under the handle; the body scrolls below it. */
+  .mobile-sheet__dock {
+    flex: none;
+    padding: 0 10px 8px;
+  }
+
+  .mobile-sheet .timebar {
+    position: static;
+    left: auto;
+    right: auto;
+    bottom: auto;
+    transform: none;
+    margin: 0;
+    width: auto;
+  }
+
+  .mobile-sheet__grip {
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    width: 40px;
+    height: 4px;
+    margin-left: -20px;
+    border-radius: 2px;
+    background: rgba(143, 166, 192, 0.55);
+  }
+
+  .mobile-sheet__body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    padding: 0 10px 16px;
+  }
+
+  /* Panels flow inside the sheet instead of floating */
+  .mobile-sheet .hud--left,
+  .mobile-sheet .hud--right {
+    position: static;
+    top: auto;
+    right: auto;
+    bottom: auto;
+    left: auto;
+    width: auto;
+  }
+
+  .mobile-sheet .panel,
+  .mobile-sheet .chart-panel {
+    backdrop-filter: none;
+  }
+
+  .mobile-sheet .chart-panel {
+    position: static;
+    width: auto;
+    margin-bottom: 10px;
+  }
+
+  .mobile-sheet .chart-panel__body {
+    height: 220px;
+  }
+
+  /* Touch targets: 44 px is the accepted minimum */
+  .toggle {
+    min-height: 44px;
+    gap: 10px;
+    font-size: 13px;
+  }
+
+  .toggle input[type='checkbox'] {
+    width: 20px;
+    height: 20px;
+  }
+
+  .preset-button {
+    padding: 10px 8px;
+    font-size: 12px;
+  }
+
+  .details__locate {
+    min-height: 44px;
+  }
 }

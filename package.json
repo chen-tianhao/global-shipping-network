@@ -12,9 +12,10 @@
     "check:boundaries": "node scripts/check-boundaries.mjs",
     "check:dist": "node scripts/check-dist.mjs",
     "build:data": "node scripts/build-data.mjs",
-    "build:mask": "node scripts/build_landmask.mjs",
+    "build:mask": "node scripts/build_landmask.mjs && node scripts/build_landmask.mjs --width 2048 --height 1024 --out public/data/landmask-2k.png",
     "build:coast": "node scripts/run-python.mjs scripts/build_coastline.py",
     "smoke": "node scripts/smoke.mjs",
+    "smoke:mobile": "node scripts/smoke.mjs --mobile",
     "build:geo": "node scripts/run-python.mjs scripts/build_geo.py --input ../WSC_SimulationChallenge_2026/SimulationChallenge2026_Py/Input",
     "verify:geo": "node scripts/run-python.mjs scripts/verify_geo.py",
     "verify:motion": "node scripts/verify_motion.mjs"

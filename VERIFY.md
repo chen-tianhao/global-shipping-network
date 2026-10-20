@@ -226,6 +226,21 @@ npm run smoke "http://127.0.0.1:4173/?provider=real"
 2. **`public/data` 下的生成物必须入库**（`.gitignore` 已放行）。Pages 的构建机没有 `WSC_SimulationChallenge_2026` 的仿真输出，也没预装 numpy，跑不了 `build:geo` / `build:data`；不入库就必然出现 `/data/ports.json` 404。
 3. 构建末尾的 `check:dist` 会在缺文件时直接失败，Pages 的构建日志里能一眼看到缺哪一项、该跑哪个命令。
 
+**局域网 / Tailscale 预览**
+
+```bash
+npx vite preview --port 4173 --host 100.85.181.126
+```
+
+绑定到具体网卡而不是 `0.0.0.0`：只有 Tailscale 网段可达，不暴露到物理局域网。
+注意绑定后 `127.0.0.1` 不再监听，冒烟必须显式传地址：
+
+```bash
+WSC_SHOTS=0 npm run smoke "http://100.85.181.126:4173/"
+```
+
+Windows 防火墙需要放行 `node.exe` 入站（本机 Private/Public 已有 Node.js 规则）。
+
 **路径解析规则**
 
 - `dataBaseUrl` 默认是 `data`，**相对当前页面 URL** 解析。站点是 `https://host/ship/` → 请求 `https://host/ship/data/...`。
@@ -260,3 +275,48 @@ npm run build          # 末尾自动跑 check:dist
 
 - 看到 JSON → 数据没问题，检查是不是 `?data=` 指错了目录；
 - 看到 `<!doctype html>` → 该路径**没有文件**，服务器回退到了首页。对照上面的目录树补文件。
+
+---
+
+## 八、移动端（≤ 640 px）
+
+桌面布局是三个浮动面板（214 + 250 + 380 px），390 px 的手机上必然互相遮挡，所以窄屏切换成**全屏地球 + 底部抽屉**：
+
+| 断点 | 布局 |
+| --- | --- |
+| `> 640px` | 现有三栏浮动面板 |
+| `≤ 640px` | 顶部状态条 + 底部时间条 + 底部 sheet（详情 / 图例 / 图层 / 图表，可滚动） |
+
+**窄屏下的具体变化**
+
+- 详情、图例、图层、图表全部搬进 sheet，点击地球上的对象会自动把 sheet 抬起；
+- 时间条固定在 sheet 的 dock（手柄下方），展开时不会被内容盖住；手柄支持上滑/下滑拖拽，点击也可切换；
+- 触屏没有 hover，悬浮提示关闭；`"定位到此处"` 按钮替代桌面端的双击飞行；
+- 拾取半径从 3 px 提到 22 px，手指点得中；
+- 图表只保留 `ATT 时序` 与 `港口等待`：22×22 的 OD 矩阵在 390 px 下每格约 14 px，低于触控目标下限；
+- 陆地底色改用 `landmask-2k.png`（GPU 约 8 MB，不再是 32 MB）；
+- `100dvh` + `env(safe-area-inset-*)`，避开 iOS 地址栏与刘海；
+- 横竖屏切换时布局会**双向搬迁**（横屏宽于断点，面板自动搬回地球上方，sheet 移除）。
+
+**验证**
+
+```bash
+npm run smoke:mobile        # 390×844 视口，自动断言 sheet 结构
+```
+
+输出三张图：
+
+| 文件 | 内容 |
+| --- | --- |
+| `smoke-mobile.png` | 竖屏初始状态（sheet 收起） |
+| `smoke-mobile-sheet.png` | 点开 sheet：详情 + 图例 + 图层 |
+| `smoke-mobile-interaction.png` | 交互后（选中上海、切到港口等待页签） |
+
+断言包含：viewport 确实是 390 px、sheet 存在、详情与图表确实在 sheet 内、时间条确实在 dock 内且完整落在视口里、页签数为 2、拖拽手柄向下可关闭/向上可打开、旋转到 844×390 后 sheet 被移除且面板回到浮动布局。
+
+截图是诊断产物，不是断言：`WSC_SHOTS=0 npm run smoke:mobile` 可在禁止写文件的限制环境下跑完整检查。
+
+**当前的已知限制**
+
+- 未在真机上验证过：iOS Safari 的安全区、双指缩放与页面手势的冲突、低端安卓的帧率。真机回归是下一步。
+- 桌面端不受影响：`npm run smoke` 会断言 `sheet` 不存在、页签仍为 3 个。

@@ -31,6 +31,12 @@ export interface HudOptions {
   onToggleLayer(id: string, visible: boolean): void;
   onWarmUpChange(show: boolean): void;
   onPreset(preset: CameraPreset): void;
+  /**
+   * Explicit "fly to this object" action. Double-click does the same thing with
+   * a mouse; on touch there is no reliable double-click, so the button is the
+   * gesture-free path.
+   */
+  onLocate?(payload: PickPayload): void;
 }
 
 export interface Hud {
@@ -157,6 +163,13 @@ export function createHud(
     }
 
     details.append(el('h3', 'details__title', payload.label));
+
+    if (options.onLocate) {
+      const locate = el('button', 'details__locate', '定位到此处');
+      locate.type = 'button';
+      locate.addEventListener('click', () => options.onLocate?.(payload));
+      details.append(locate);
+    }
 
     if (payload.kind === 'port') {
       const port = model.ports.find((item) => item.id === payload.id);

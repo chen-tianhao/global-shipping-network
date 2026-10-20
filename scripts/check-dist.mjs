@@ -39,6 +39,7 @@ const REQUIRED = [
 const RECOMMENDED = [
   'data/coastline.json',
   'data/landmask.png',
+  'data/landmask-2k.png',
   'data/trajectory/meta.json',
   'data/trajectory/voyages.csv',
   'data/trajectory/states.csv',
