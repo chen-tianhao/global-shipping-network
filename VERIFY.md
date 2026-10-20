@@ -226,6 +226,21 @@ npm run smoke "http://127.0.0.1:4173/?provider=real"
 2. **`public/data` 下的生成物必须入库**（`.gitignore` 已放行）。Pages 的构建机没有 `WSC_SimulationChallenge_2026` 的仿真输出，也没预装 numpy，跑不了 `build:geo` / `build:data`；不入库就必然出现 `/data/ports.json` 404。
 3. 构建末尾的 `check:dist` 会在缺文件时直接失败，Pages 的构建日志里能一眼看到缺哪一项、该跑哪个命令。
 
+**局域网 / Tailscale 预览**
+
+```bash
+npx vite preview --port 4173 --host 100.85.181.126
+```
+
+绑定到具体网卡而不是 `0.0.0.0`：只有 Tailscale 网段可达，不暴露到物理局域网。
+注意绑定后 `127.0.0.1` 不再监听，冒烟必须显式传地址：
+
+```bash
+WSC_SHOTS=0 npm run smoke "http://100.85.181.126:4173/"
+```
+
+Windows 防火墙需要放行 `node.exe` 入站（本机 Private/Public 已有 Node.js 规则）。
+
 **路径解析规则**
 
 - `dataBaseUrl` 默认是 `data`，**相对当前页面 URL** 解析。站点是 `https://host/ship/` → 请求 `https://host/ship/data/...`。
