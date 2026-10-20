@@ -10,7 +10,6 @@
  */
 
 import {
-  ArcType,
   Cartesian3,
   Color,
   Material,
@@ -36,10 +35,11 @@ export class CoastlineLayer implements SceneLayer {
     this.collection = viewer.scene.primitives.add(new PolylineCollection());
     for (const line of this.lines) {
       if (line.length < 2) continue;
+      // The asset is simplified to ~2 km, so a straight chord is already
+      // within 8 cm of the surface - no densification needed here.
       this.collection.add({
         positions: line.map(([lon, lat]) => Cartesian3.fromDegrees(lon, lat, 0)),
         width: 1,
-        arcType: ArcType.GEODESIC,
         material: Material.fromType('Color', { color: COAST_COLOR }),
       });
     }

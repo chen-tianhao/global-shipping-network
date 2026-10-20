@@ -9,19 +9,26 @@
  */
 
 import {
-  ArcType,
   Cartesian3,
   Color,
   Material,
   PolylineCollection,
   type Viewer,
 } from 'cesium';
+import { densifyGreatCircle, isClosedRing } from '../../data/geo/geoMath';
 import type { SceneModel } from '../../viewmodel/sceneModel';
 import type { PickPayload, SceneLayer } from './SceneLayer';
 
 const MAIN_COLOR = Color.fromCssColorString('#4cc9f0').withAlpha(0.75);
 const ALT_COLOR = Color.fromCssColorString('#ffd166').withAlpha(0.55);
 const HIGHLIGHT_COLOR = Color.fromCssColorString('#ff6b6b');
+
+/**
+ * Vertices are inserted so no segment exceeds this. `PolylineCollection` joins
+ * vertices with straight chords (its `Polyline` has no `arcType`), and a
+ * 50 km chord sags 49 m - sub-pixel at every zoom this app allows.
+ */
+const MAX_SEGMENT_KM = 50;
 
 export class RouteLayer implements SceneLayer {
   readonly id = 'routes';
@@ -36,7 +43,21 @@ export class RouteLayer implements SceneLayer {
 
     for (const route of model.routes) {
       if (route.waypoints.length < 2) continue;
-      const positions = route.waypoints.map(([lon, lat]) =>
+
+      // `PolylineCollection` has no arc type: it draws straight chords, so the
+      // great-circle legs must be densified before they reach it. The longest
+      // leg in the network is 8,787 km; as a chord it would pass 1,757 km
+      // below the surface and disappear into the globe.
+      const densified = densifyGreatCircle(route.waypoints, MAX_SEGMENT_KM);
+      if (densified.length < 2) continue;
+
+      // Service routes are round trips: the last waypoint repeats the first.
+      // Drop it and close the ring instead of leaving a zero-length segment.
+      const closed = isClosedRing(route.waypoints);
+      const path = closed ? densified.slice(0, -1) : densified;
+      if (path.length < 2) continue;
+
+      const positions = path.map(([lon, lat]) =>
         Cartesian3.fromDegrees(lon, lat, 0),
       );
       const payload: PickPayload = { kind: 'route', id: route.id, label: route.name };
@@ -45,12 +66,9 @@ export class RouteLayer implements SceneLayer {
       this.collection.add({
         positions,
         width: route.isAlternative ? 1.5 : 2.5,
+        loop: closed,
         id: payload,
         material: Material.fromType('Color', { color }),
-        // Explicit, not left to the default: the build-time land-avoidance
-        // check proves the *geodesic* arc is clear of land, so the renderer
-        // must draw exactly that curve.
-        arcType: ArcType.GEODESIC,
       });
     }
   }

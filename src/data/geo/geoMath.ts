@@ -4,13 +4,17 @@
  *
  * WHY THIS MODULE EXISTS
  * ----------------------
- * The renderer draws *geodesic* arcs (Cesium polylines are geodesic by default
- * and `RouteLayer` sets `ArcType.GEODESIC` explicitly). Anything that places a
- * vessel between two waypoints must therefore follow the same curve. Linear
- * lon/lat interpolation does not: on a long leg the two curves diverge by
- * hundreds of kilometres, and across the antimeridian the linear path goes the
- * long way round the planet. Both errors make vessels visibly cross land even
- * though the route geometry itself was verified to be clear.
+ * Route geometry is authored as great-circle legs, and anything that places a
+ * vessel between two waypoints must follow the same curve. Linear lon/lat
+ * interpolation does not: on a long leg the two curves diverge by hundreds of
+ * kilometres, and across the antimeridian the linear path goes the long way
+ * round the planet. Both errors make vessels visibly cross land even though the
+ * route geometry itself was verified to be clear.
+ *
+ * The renderer needs the same care for a different reason: `PolylineCollection`
+ * has no `arcType` - it joins vertices with straight 3D chords. A 1,000 km chord
+ * passes 20 km below the ellipsoid and disappears into the globe, which is why
+ * `densifyGreatCircle` exists below.
  *
  * This module deliberately has no Cesium, DOM or I/O dependency, so exactly the
  * same code that runs in the browser can be unit-tested in Node
@@ -51,6 +55,49 @@ export function greatCircleDistanceNm(a: LonLat, b: LonLat): number {
     Math.sin(dPhi / 2) ** 2 +
     Math.cos(phi1) * Math.cos(phi2) * Math.sin(dLambda / 2) ** 2;
   return 2 * Math.asin(Math.min(1, Math.sqrt(h))) * EARTH_RADIUS_NM;
+}
+
+/**
+ * Insert intermediate vertices so no segment spans more than `maxStepKm` of
+ * great-circle distance, and drop consecutive duplicates.
+ *
+ * Why: `PolylineCollection` (every layer here) connects vertices with straight
+ * 3D chords - the `arcType` option it appears to accept does not exist on
+ * `Polyline` and is silently ignored. A 1,000 km chord dips 20 km below the
+ * ellipsoid, so the line vanishes into the globe; at 50 km the sag is 49 m,
+ * which is below one pixel at every zoom this app allows.
+ *
+ * Total cost is small: the whole network is ~230,000 km, i.e. ~4,600 vertices.
+ */
+export function densifyGreatCircle(
+  points: ReadonlyArray<LonLat>,
+  maxStepKm = 50,
+): Array<[number, number]> {
+  if (points.length === 0) return [];
+  const maxStepNm = maxStepKm / 1.852;
+  const out: Array<[number, number]> = [[points[0][0], points[0][1]]];
+
+  for (let i = 1; i < points.length; i += 1) {
+    const a = points[i - 1];
+    const b = points[i];
+    const distance = greatCircleDistanceNm(a, b);
+    // Duplicate vertices produce zero-length segments, which the polyline
+    // shader cannot derive a normal from.
+    if (distance < 1e-3) continue;
+
+    const steps = Math.max(1, Math.ceil(distance / maxStepNm));
+    for (let step = 1; step <= steps; step += 1) {
+      const point = interpolateGreatCircle(a, b, step / steps);
+      out.push([point[0], point[1]]);
+    }
+  }
+  return out;
+}
+
+/** True when the first and last vertex are the same point (a round trip). */
+export function isClosedRing(points: ReadonlyArray<LonLat>): boolean {
+  if (points.length < 3) return false;
+  return greatCircleDistanceNm(points[0], points[points.length - 1]) < 1e-3;
 }
 
 /**

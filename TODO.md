@@ -37,6 +37,12 @@
 - [ ] CI 串起 `typecheck → build → verify:motion → smoke`；`verify:geo` 在具备 numpy 的环境单独跑。
 - [ ] 统一规划文档与实际数据口径（20/22 港口、`disruptions.json`）。`RouteVM.capacityTeu` 已由 `Service_Route_Utilization.csv` 关联补齐。
 
+## 航线观感
+
+- [x] **B：渲染前加密**（commit 见 `fix/routes` 之后的提交）：`densifyGreatCircle` 按 50 km 采样，最长弦从 8,787 km 降到 50 km，消除"插进地球/边缘断开"。
+- [ ] **C：数据侧简化**：`build_geo.py` 加 RDP（1–2 km）+ 平滑，可删掉 66% 顶点（2,706 → 932），需重跑 `build_geo` 与 `verify_geo`。
+- [ ] **D：网格升级**：A* 改 16/32 邻域或加转角惩罚，消除 68% 段落在 45° 整数倍的阶梯痕迹。
+
 ## 移动端（`mobile` 分支）
 
 - [x] P0 布局：≤640px 切到「全屏地球 + 底部 sheet」，详情/图例/图层/图表全部搬入；顶部状态条与底部时间条压缩；`100dvh` + `env(safe-area-inset-*)`。

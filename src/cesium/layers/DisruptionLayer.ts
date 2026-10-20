@@ -12,7 +12,6 @@
  */
 
 import {
-  ArcType,
   Cartesian3,
   Color,
   HorizontalOrigin,
@@ -28,6 +27,7 @@ import {
   type Polyline,
   type Viewer,
 } from 'cesium';
+import { densifyGreatCircle } from '../../data/geo/geoMath';
 import type { SceneModel } from '../../viewmodel/sceneModel';
 import { portById, segmentsBetween } from '../../viewmodel/sceneModel';
 import type { DisruptionVM, RouteSegmentVM } from '../../data/types';
@@ -135,14 +135,16 @@ export class DisruptionLayer implements SceneLayer {
     payload: PickPayload,
   ): Polyline | null {
     if (!this.lines || segment.waypoints.length < 2) return null;
+    // Same reason as RouteLayer: PolylineCollection draws chords, so the
+    // geodesic must be sampled before it is handed over.
+    const positions = densifyGreatCircle(segment.waypoints, 50).map(([lon, lat]) =>
+      Cartesian3.fromDegrees(lon, lat, 0),
+    );
+    if (positions.length < 2) return null;
     return this.lines.add({
-      positions: segment.waypoints.map(([lon, lat]) =>
-        Cartesian3.fromDegrees(lon, lat, 0),
-      ),
+      positions,
       width: 3,
       material: Material.fromType('Color', { color: CONGESTED_COLOR }),
-      // The segment is land-avoiding as a geodesic, so draw that exact curve.
-      arcType: ArcType.GEODESIC,
       id: payload,
       show: false,
     });

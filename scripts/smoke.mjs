@@ -337,6 +337,23 @@ try {
       );
       const presetButtons = document.querySelectorAll('.preset-button').length;
       const warmUpToggle = Boolean(document.querySelector('.warmup-toggle'));
+      // Route polylines are densified to 50 km steps; a straight chord of
+      // 8,787 km would dip 1,757 km below the ellipsoid and vanish into the
+      // globe, so this is the regression guard for that class of bug.
+      const routeLayer = w.layers.find((layer) => layer.id === 'routes');
+      let maxRouteSegKm = 0;
+      let routeVertices = 0;
+      if (routeLayer && routeLayer.collection) {
+        for (let i = 0; i < routeLayer.collection.length; i += 1) {
+          const positions = routeLayer.collection.get(i).positions;
+          routeVertices += positions.length;
+          for (let j = 1; j < positions.length; j += 1) {
+            const km = Cesium.Cartesian3.distance(positions[j - 1], positions[j]) / 1000;
+            if (km > maxRouteSegKm) maxRouteSegKm = km;
+          }
+        }
+      }
+
       const sheet = document.querySelector('.mobile-sheet');
 
       // Visible globe window, in degrees. Framing bugs (antimeridian,
@@ -356,6 +373,8 @@ try {
         ready: true,
         viewport: { w: window.innerWidth, h: window.innerHeight },
         viewRect,
+        maxRouteSegKm: Math.round(maxRouteSegKm),
+        routeVertices,
         cameraHeightKm: Math.round(w.viewer.camera.positionCartographic.height / 1000),
         sheet: Boolean(sheet),
         sheetOpen: Boolean(sheet && sheet.classList.contains('is-open')),
@@ -870,6 +889,14 @@ try {
     );
   }
   const expectedTabs = MOBILE ? 2 : 3;
+  if (first.maxRouteSegKm > 60) {
+    failures.push(
+      `route polyline has a ${first.maxRouteSegKm} km chord (densification should keep it <= 50 km)`,
+    );
+  }
+  if (first.routeVertices < 3000) {
+    failures.push(`only ${first.routeVertices} route vertices; densification looks disabled`);
+  }
   if (first.chartTabs !== expectedTabs) {
     failures.push(`expected ${expectedTabs} chart tabs, found ${first.chartTabs}`);
   }
