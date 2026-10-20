@@ -529,19 +529,21 @@ body,
     z-index: 30;
     display: flex;
     flex-direction: column;
-    height: 72vh;
-    height: min(72dvh, 620px);
+    /* Collapsed = exactly the dock (handle + time bar + safe area), measured
+       in JS. Animating height instead of a translate keeps the dock flush with
+       the bottom edge even if the measurement lands a frame late. */
+    height: var(--dock-height, 115px);
     padding-bottom: env(safe-area-inset-bottom);
     border-top: 1px solid var(--panel-border);
     border-radius: 16px 16px 0 0;
     background: rgba(9, 20, 34, 0.97);
-    /* --dock-height is measured in JS: handle + time bar. */
-    transform: translateY(calc(100% - var(--dock-height, 104px)));
-    transition: transform 220ms ease;
+    overflow: hidden;
+    transition: height 220ms ease;
   }
 
   .mobile-sheet.is-open {
-    transform: translateY(0);
+    height: 72vh;
+    height: min(72dvh, 620px);
   }
 
   .mobile-sheet__handle {

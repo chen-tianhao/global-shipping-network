@@ -370,6 +370,19 @@ try {
           const rect = bar.getBoundingClientRect();
           return rect.top >= 0 && rect.bottom <= window.innerHeight + 1;
         })(),
+        timebarRect: (() => {
+          const bar = document.querySelector('.timebar');
+          const box = document.querySelector('.mobile-sheet');
+          const handle = document.querySelector('.mobile-sheet__handle');
+          const dock = document.querySelector('.mobile-sheet__dock');
+          if (!bar) return null;
+          const r = (node) => {
+            if (!node) return null;
+            const b = node.getBoundingClientRect();
+            return { top: Math.round(b.top), bottom: Math.round(b.bottom), h: Math.round(b.height) };
+          };
+          return { bar: r(bar), sheet: r(box), handle: r(handle), dock: r(dock) };
+        })(),
         maxOffRouteNm: Math.round(maxOffRouteNm),
         worstOffRoute,
         disruptionItems,
@@ -602,17 +615,17 @@ try {
         const isOpen = () => sheet.classList.contains('is-open');
 
         const before = isOpen();
-        fire('pointerdown', 200);
-        fire('pointermove', 360);
+        fire('pointerdown', 180);
+        fire('pointermove', 400);
         const midDrag = sheet.dataset.drag ?? null;
-        fire('pointermove', 520);
-        fire('pointerup', 520);
+        fire('pointermove', 640);
+        fire('pointerup', 640);
         const afterDown = isOpen();
 
-        fire('pointerdown', 600);
-        fire('pointermove', 440);
-        fire('pointermove', 280);
-        fire('pointerup', 280);
+        fire('pointerdown', 700);
+        fire('pointermove', 460);
+        fire('pointermove', 240);
+        fire('pointerup', 240);
         const afterUp = isOpen();
 
         return {

@@ -60,7 +60,8 @@ export function createMobileSheet(parent: HTMLElement): MobileSheet | null {
   parent.append(sheet);
 
   let open = false;
-  let dockHeight = 104;
+  // Collapsed height = handle + dock (+ safe area). Set from measurement.
+  let dockHeight = 115;
 
   function setOpen(next: boolean): void {
     open = next;
@@ -74,20 +75,25 @@ export function createMobileSheet(parent: HTMLElement): MobileSheet | null {
   // A bottom sheet that only reacts to taps feels broken on touch. Pointer
   // events cover mouse and touch with one code path; the click handler is not
   // used, because a drag would otherwise toggle on release.
+  //
+  // The sheet animates its *height*, not a translate: the collapsed height is
+  // exactly the dock, so the bar can never end up a few pixels below the
+  // viewport because of a stale measurement.
   let dragging = false;
   let moved = false;
   let dragStartY = 0;
-  let dragStartOpen = false;
-  let dragOffset = 0;
+  let dragStartHeight = 0;
+  let dragHeight = 0;
 
-  const collapsedOffset = () => Math.max(1, sheet.offsetHeight - dockHeight);
+  const expandedHeight = () => Math.min(window.innerHeight * 0.72, 620);
+  const collapsedHeight = () => dockHeight;
 
   handle.addEventListener('pointerdown', (event) => {
     dragging = true;
     moved = false;
     dragStartY = event.clientY;
-    dragStartOpen = open;
-    dragOffset = dragStartOpen ? 0 : collapsedOffset();
+    dragStartHeight = sheet.offsetHeight;
+    dragHeight = dragStartHeight;
     try {
       handle.setPointerCapture(event.pointerId);
     } catch {
@@ -102,13 +108,12 @@ export function createMobileSheet(parent: HTMLElement): MobileSheet | null {
     if (Math.abs(delta) > 4) moved = true;
     if (!moved) return;
 
-    const offset = Math.min(
-      collapsedOffset(),
-      Math.max(0, (dragStartOpen ? 0 : collapsedOffset()) + delta),
+    dragHeight = Math.min(
+      expandedHeight(),
+      Math.max(collapsedHeight(), dragStartHeight - delta),
     );
-    dragOffset = offset;
-    sheet.style.transform = `translateY(${offset}px)`;
-    sheet.dataset.drag = String(Math.round(offset));
+    sheet.style.height = `${Math.round(dragHeight)}px`;
+    sheet.dataset.drag = String(Math.round(dragHeight));
   });
 
   function endDrag(event: PointerEvent): void {
@@ -123,26 +128,19 @@ export function createMobileSheet(parent: HTMLElement): MobileSheet | null {
     }
 
     if (!moved) {
-      sheet.style.removeProperty('transform');
+      sheet.style.removeProperty('height');
       setOpen(!open);
       return;
     }
 
-    // Commit at 30 % of the travel in either direction, which is the usual
-    // bottom-sheet threshold. Half the sheet would feel sticky on a 600 px
-    // tall panel.
-    const collapsed = collapsedOffset();
-    // `dragOffset` grows as the sheet slides down. From the open state a large
-    // offset means "close"; from the collapsed state a small offset means
-    // "open".
-    setOpen(
-      dragStartOpen
-        ? dragOffset <= collapsed * 0.3
-        : dragOffset < collapsed * 0.7,
-    );
-    // Drop the inline transform on the next frame so the transition starts
-    // from where the finger left it instead of jumping to the old position.
-    requestAnimationFrame(() => sheet.style.removeProperty('transform'));
+    // Commit past 30 % of the travel, which is the usual bottom-sheet
+    // threshold; half the panel would feel sticky at this height.
+    const collapsed = collapsedHeight();
+    const expanded = expandedHeight();
+    setOpen(dragHeight > collapsed + (expanded - collapsed) * 0.3);
+    // Drop the inline height on the next frame so the transition starts from
+    // where the finger left it instead of jumping.
+    requestAnimationFrame(() => sheet.style.removeProperty('height'));
   }
 
   handle.addEventListener('pointerup', endDrag);
@@ -157,9 +155,12 @@ export function createMobileSheet(parent: HTMLElement): MobileSheet | null {
 
   function setDockHeight(px: number): void {
     if (!Number.isFinite(px) || px <= 0) return;
-    dockHeight = px;
-    sheet.style.setProperty('--dock-height', `${px}px`);
-    sheet.dataset.dock = String(Math.round(px));
+    // Measure the handle and dock, then add the safe-area padding: the
+    // collapsed sheet is border-box, so its height must include that padding.
+    const padding = Number.parseFloat(getComputedStyle(sheet).paddingBottom) || 0;
+    dockHeight = Math.ceil(px + padding);
+    sheet.style.setProperty('--dock-height', `${dockHeight}px`);
+    sheet.dataset.dock = String(dockHeight);
   }
 
   return {
