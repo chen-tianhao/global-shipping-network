@@ -52,12 +52,40 @@ body,
   position: absolute;
   top: 16px;
   left: 20px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
   max-width: 560px;
   padding: 12px 16px;
   border: 1px solid var(--panel-border);
   border-radius: 10px;
   background: var(--panel);
   backdrop-filter: blur(6px);
+}
+
+.hud__body {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Language toggle: shows the language you would switch to. */
+.hud__lang {
+  flex: none;
+  min-width: 40px;
+  min-height: 24px;
+  padding: 3px 8px;
+  border: 1px solid rgba(76, 201, 240, 0.35);
+  border-radius: 6px;
+  background: rgba(76, 201, 240, 0.14);
+  color: var(--text);
+  font-size: 10px;
+  line-height: 1.2;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+
+.hud__lang:hover {
+  background: rgba(76, 201, 240, 0.28);
 }
 
 .hud__title {
@@ -116,6 +144,27 @@ body,
   letter-spacing: 0.08em;
   color: var(--text-dim);
   text-transform: uppercase;
+}
+
+/* A panel whose title shares its row with a control (the details panel's
+   language toggle). */
+.panel__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.panel__head .panel__title {
+  margin: 0;
+}
+
+.panel__actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
 }
 
 .legend__title {
@@ -243,6 +292,36 @@ body,
   font-size: 12px;
   font-variant-numeric: tabular-nums;
   color: var(--text-dim);
+}
+
+/* The bar is centred at the top, in the same band as the status strip and the
+   details panel. Below ~1100 px it would run under the details panel, so the
+   slider - the only elastic element - gives up width first. */
+@media (max-width: 1100px) {
+  .timebar__slider {
+    width: 160px;
+  }
+
+  .timebar__readout {
+    min-width: 130px;
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 860px) {
+  .timebar__slider {
+    width: 110px;
+  }
+
+  .timebar__readout {
+    min-width: 110px;
+  }
+
+  /* Same trade-off as the phone layout: the speed preset is the widest
+     control and the clock keeps its multiplier, so it goes first. */
+  .timebar__select {
+    display: none;
+  }
 }
 
 /* ---- camera presets ----------------------------------------------------- */
@@ -484,6 +563,12 @@ body,
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+
+  .hud__lang {
+    min-width: 48px;
+    min-height: 44px;
+    font-size: 12px;
   }
 
   /* Time bar: above the sheet handle, one compact row */

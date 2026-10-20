@@ -4,9 +4,22 @@
  * Plain DOM on purpose - the panel content is small and changes rarely, so a
  * framework would add a virtual DOM competing with the WebGL loop for no
  * benefit. See the technical plan for the full reasoning.
+ *
+ * Localisation: static labels are tagged with `data-i18n` and re-labelled in
+ * place by `translateDom`; anything derived from state (the status line, the
+ * warm-up day count, the details table) is rebuilt by `refresh()`. The panel is
+ * never recreated, so the mobile sheet keeps holding the same nodes.
  */
 
-import { el, keyValue, panel, row, swatch } from './dom';
+import { el, elI18n, keyValue, panel, row, swatch } from './dom';
+import {
+  currentLocale,
+  numberLocaleTag,
+  t,
+  toggleLocale,
+  translateDom,
+  type MessageKey,
+} from '../i18n';
 import {
   portWaitingStops,
   toCss,
@@ -15,17 +28,20 @@ import {
 import { waitingTeuByPort } from '../viewmodel/sceneModel';
 import {
   CAMERA_PRESET_ORDER,
-  CAMERA_PRESETS,
   type CameraPreset,
 } from '../viewmodel/cameraPresets';
+import { payloadTitle } from '../viewmodel/labels';
 import type { SceneModel } from '../viewmodel/sceneModel';
 import type { PickPayload } from '../data/types';
 import type { SceneLayer } from '../cesium/layers/SceneLayer';
 
 export interface HudOptions {
-  baseLayerLabel: string;
+  /**
+   * Base map and motion source described in the active language. A callback,
+   * not a string: the status line has to regenerate when the locale changes.
+   */
+  describeContext(): { base: string; motion: string };
   isPlaceholderMotion: boolean;
-  motionLabel: string;
   showWarmUp: boolean;
   warmUpDays: number;
   onToggleLayer(id: string, visible: boolean): void;
@@ -41,6 +57,14 @@ export interface HudOptions {
 
 export interface Hud {
   setSelected(payload: PickPayload | null): void;
+  /** Re-render everything that is not a static dictionary label. */
+  refresh(): void;
+  /**
+   * Desktop: the toggle sits in the details panel header, well clear of the
+   * centred time bar. Phones: it moves back into the status strip, because the
+   * details panel lives inside the collapsible sheet there.
+   */
+  setLanguageButtonPlacement(where: 'panel' | 'header'): void;
 }
 
 export function createHud(
@@ -50,54 +74,55 @@ export function createHud(
   options: HudOptions,
 ): Hud {
   root.innerHTML = '';
+  let selected: PickPayload | null = null;
 
   // ---- status strip -------------------------------------------------------
   const status = el('header', 'hud hud--top');
-  status.append(el('h1', 'hud__title', '全球集装箱航运网络 · 3D 沙盘'));
-  status.append(
-    el(
-      'p',
-      'hud__subtitle',
-      `底图：${options.baseLayerLabel} · 运动：${options.motionLabel}`,
-    ),
-  );
+  const statusBody = el('div', 'hud__body');
+  statusBody.append(elI18n('h1', 'hud__title', 'app.title'));
+  const subtitle = el('p', 'hud__subtitle');
+  statusBody.append(subtitle);
   if (options.isPlaceholderMotion) {
-    const warn = el('p', 'hud__warn');
-    warn.textContent =
-      '船舶运动为占位数据：等速沿航线巡航，不含排队、靠泊与扰动响应，不能读作仿真结果。';
-    status.append(warn);
+    statusBody.append(elI18n('p', 'hud__warn', 'status.placeholder'));
   }
+
+  // One click flips the whole UI. The label shows the *target* language, which
+  // is the convention users expect from a compact toggle.
+  const langButton = el('button', 'hud__lang');
+  langButton.type = 'button';
+  langButton.addEventListener('click', () => toggleLocale());
+  status.append(statusBody);
   root.append(status);
 
   // ---- legend + toggles ---------------------------------------------------
   const left = el('aside', 'hud hud--left');
 
   const portLegend = el('div', 'legend');
-  portLegend.append(el('h3', 'legend__title', '港口 · 等待 TEU'));
+  portLegend.append(elI18n('h3', 'legend__title', 'hud.legendPorts'));
   const portStops = portWaitingStops(
     model.ports.map((port) => waitingTeuByPort(model, port.id)),
   );
   for (const [value, color] of portStops) {
     portLegend.append(
-      row(swatch(toCss(color)), Math.round(value).toLocaleString('zh-CN')),
+      row(swatch(toCss(color)), Math.round(value).toLocaleString(numberLocaleTag())),
     );
   }
 
   const vesselLegend = el('div', 'legend');
-  vesselLegend.append(el('h3', 'legend__title', '船舶 · 状态'));
-  const stateLabels: Record<string, string> = {
-    sailing: '航行中',
-    queuing: '锚地等待',
-    served: '在泊作业',
-    idle: '闲置',
-  };
+  vesselLegend.append(elI18n('h3', 'legend__title', 'hud.legendVessels'));
   for (const [state, color] of Object.entries(VESSEL_STATE_RGBA)) {
-    vesselLegend.append(row(swatch(toCss(color)), stateLabels[state] ?? state));
+    const item = el('div', 'row');
+    item.append(
+      swatch(toCss(color)),
+      elI18n('span', 'row__text', `state.${state}` as MessageKey),
+    );
+    vesselLegend.append(item);
   }
 
-  left.append(panel('图例', portLegend, vesselLegend));
+  left.append(panel('hud.panelLegend', portLegend, vesselLegend));
 
   const toggles = el('div', 'toggles');
+  const layerLabels: Array<{ node: HTMLElement; layer: SceneLayer }> = [];
   for (const layer of layers) {
     const label = el('label', 'toggle');
     const input = el('input');
@@ -106,23 +131,28 @@ export function createHud(
     input.addEventListener('change', () => {
       options.onToggleLayer(layer.id, input.checked);
     });
-    label.append(input, el('span', undefined, layer.label));
+    const text = el('span', undefined, layer.label);
+    label.append(input, text);
     toggles.append(label);
+    // `label` is a getter that reads the dictionary, so re-reading it here is
+    // enough to switch languages.
+    layerLabels.push({ node: text, layer });
   }
-  left.append(panel('图层', toggles));
+  left.append(panel('hud.panelLayers', toggles));
 
   const presets = el('div', 'preset-grid');
   for (const preset of CAMERA_PRESET_ORDER) {
     const button = el(
       'button',
       'preset-button',
-      CAMERA_PRESETS[preset].label,
+      t(`preset.${preset}` as MessageKey),
     );
     button.type = 'button';
+    button.dataset.i18n = `preset.${preset}`;
     button.addEventListener('click', () => options.onPreset(preset));
     presets.append(button);
   }
-  left.append(panel('视角', presets));
+  left.append(panel('hud.panelCamera', presets));
 
   const timeRange = el('div', 'toggles');
   const warmUpLabel = el('label', 'toggle');
@@ -133,39 +163,43 @@ export function createHud(
   warmUpInput.addEventListener('change', () => {
     options.onWarmUpChange(warmUpInput.checked);
   });
-  warmUpLabel.append(
-    warmUpInput,
-    el(
-      'span',
-      undefined,
-      `含预热期（${options.warmUpDays} 天）`,
-    ),
-  );
+  const warmUpText = el('span');
+  warmUpLabel.append(warmUpInput, warmUpText);
   timeRange.append(warmUpLabel);
-  left.append(panel('时间范围', timeRange));
+  left.append(panel('hud.panelTimeRange', timeRange));
 
   root.append(left);
 
   // ---- selection details --------------------------------------------------
   const right = el('aside', 'hud hud--right');
   const details = el('div', 'details');
-  details.append(el('p', 'details__empty', '点击地球上的港口、航线、船舶或扰动事件查看详情。'));
-  right.append(panel('详情', details));
+  // Built by hand rather than through `panel()`: this one header carries the
+  // language toggle, so it needs a two-slot row instead of a bare title.
+  const detailsPanel = el('section', 'panel');
+  const detailsHead = el('div', 'panel__head');
+  const langSlot = el('span', 'panel__actions');
+  detailsHead.append(elI18n('h2', 'panel__title', 'hud.panelDetails'), langSlot);
+  detailsPanel.append(detailsHead, details);
+  right.append(detailsPanel);
   root.append(right);
 
   function setSelected(payload: PickPayload | null): void {
+    selected = payload;
+    renderDetails();
+  }
+
+  function renderDetails(): void {
     details.innerHTML = '';
+    const payload = selected;
     if (!payload) {
-      details.append(
-        el('p', 'details__empty', '点击地球上的港口、航线、船舶或扰动事件查看详情。'),
-      );
+      details.append(elI18n('p', 'details__empty', 'hud.detailsEmpty'));
       return;
     }
 
-    details.append(el('h3', 'details__title', payload.label));
+    details.append(el('h3', 'details__title', payloadTitle(payload, model)));
 
     if (options.onLocate) {
-      const locate = el('button', 'details__locate', '定位到此处');
+      const locate = elI18n('button', 'details__locate', 'hud.locate');
       locate.type = 'button';
       locate.addEventListener('click', () => options.onLocate?.(payload));
       details.append(locate);
@@ -177,11 +211,20 @@ export function createHud(
       const waiting = waitingTeuByPort(model, port.id);
       details.append(
         keyValue([
-          ['泊位数', `${port.berthCount}`],
-          ['经纬度', `${port.lon.toFixed(2)}, ${port.lat.toFixed(2)}`],
-          ['等待 TEU', waiting.toLocaleString('zh-CN')],
-          ['坐标来源', port.coordsVerified ? '公开资料核对' : '未核对'],
-          ...(port.tunnelledToSea ? ([['入海处理', '已开凿通道']] as Array<[string, string]>) : []),
+          [t('field.berths'), `${port.berthCount}`],
+          [t('field.coords'), `${port.lon.toFixed(2)}, ${port.lat.toFixed(2)}`],
+          [t('field.waitingTeu'), waiting.toLocaleString(numberLocaleTag())],
+          [
+            t('field.coordSource'),
+            port.coordsVerified
+              ? t('value.sourceVerified')
+              : t('value.sourceUnverified'),
+          ],
+          ...(port.tunnelledToSea
+            ? ([[t('field.seaAccess'), t('value.channelDredged')]] as Array<
+                [string, string]
+              >)
+            : []),
         ]),
       );
       if (port.note) details.append(el('p', 'details__note', port.note));
@@ -196,20 +239,26 @@ export function createHud(
         );
         details.append(
           keyValue([
-            ['航线', route.name],
-            ['挂靠航段', `${route.waypoints.length} 个路径点`],
-            ['航线里程', `${Math.round(route.totalDistanceNm).toLocaleString('zh-CN')} nm`],
-            ['配船数', `${route.vessels ?? 0}`],
+            [t('field.route'), route.name],
             [
-              '平均舱位',
+              t('field.waypoints'),
+              t('value.waypointCount', { count: route.waypoints.length }),
+            ],
+            [
+              t('field.distance'),
+              `${Math.round(route.totalDistanceNm).toLocaleString(numberLocaleTag())} nm`,
+            ],
+            [t('field.vesselCount'), `${route.vessels ?? 0}`],
+            [
+              t('field.capacity'),
               route.capacityTeu || utilization
                 ? `${Math.round(
                     route.capacityTeu ?? utilization?.capacityTeu ?? 0,
-                  ).toLocaleString('zh-CN')} TEU`
+                  ).toLocaleString(numberLocaleTag())} TEU`
                 : '—',
             ],
             [
-              '舱位利用率',
+              t('field.utilization'),
               utilization ? `${(utilization.utilization * 100).toFixed(2)}%` : '—',
             ],
           ]),
@@ -234,18 +283,23 @@ export function createHud(
 
       details.append(
         keyValue([
-          ['类型', disruption.type === 'closed_port' ? '港口关闭' : '航段拥堵'],
-          ['目标', target],
           [
-            '时间窗',
+            t('field.type'),
+            disruption.type === 'closed_port'
+              ? t('value.closedPort')
+              : t('value.segmentCongestion'),
+          ],
+          [t('field.target'), target],
+          [
+            t('field.window'),
             `Day ${Math.round(disruption.startDay)} – ${Math.round(
               disruption.endDay,
             )}`,
           ],
           [
-            '强度',
+            t('field.magnitude'),
             disruption.type === 'closed_port'
-              ? '关闭'
+              ? t('value.closed')
               : `×${disruption.magnitude}`,
           ],
         ]),
@@ -257,11 +311,33 @@ export function createHud(
     if (!vessel) return;
     details.append(
       keyValue([
-        ['所属航线', vessel.routeId ?? '—'],
-        ['采样点', `${vessel.lon.length}`],
+        [t('field.serviceRoute'), vessel.routeId ?? '—'],
+        [t('field.samples'), `${vessel.lon.length}`],
       ]),
     );
   }
 
-  return { setSelected };
+  function refresh(): void {
+    translateDom(root);
+    const context = options.describeContext();
+    subtitle.textContent = t('status.subtitle', {
+      base: context.base,
+      motion: context.motion,
+    });
+    warmUpText.textContent = t('hud.warmUp', { days: options.warmUpDays });
+    langButton.textContent = currentLocale() === 'zh' ? 'EN' : '中文';
+    langButton.title = t('locale.switchTo');
+    langButton.setAttribute('lang', currentLocale() === 'zh' ? 'en' : 'zh-CN');
+    for (const { node, layer } of layerLabels) node.textContent = layer.label;
+    renderDetails();
+  }
+
+  function setLanguageButtonPlacement(where: 'panel' | 'header'): void {
+    if (where === 'header') status.append(langButton);
+    else langSlot.append(langButton);
+  }
+
+  setLanguageButtonPlacement('panel');
+  refresh();
+  return { setSelected, refresh, setLanguageButtonPlacement };
 }

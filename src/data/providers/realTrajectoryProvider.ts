@@ -17,6 +17,7 @@
  * warm-up days become negative, matching the rest of the app.
  */
 
+import { t } from '../../i18n';
 import {
   fetchJson,
   fetchText,
@@ -111,8 +112,10 @@ export class RealTrajectoryProvider implements MotionProvider {
       );
     } catch (error) {
       throw new Error(
-        `真实轨迹数据不可用（${root}/trajectory）。请先运行 npm run build:data。` +
-          (error instanceof Error ? ` 原始错误：${error.message}` : ''),
+        t('error.trajectoryMissing', { root }) +
+          (error instanceof Error
+            ? t('error.rawDetail', { message: error.message })
+            : ''),
       );
     }
   }
@@ -174,7 +177,7 @@ function buildMotion(
   const measurementStart = parseTimestamp(meta.measurementStartIso);
   if (!Number.isFinite(measurementStart)) {
     throw new Error(
-      `meta.json 的 measurementStartIso 无法解析：${String(meta.measurementStartIso)}`,
+      t('error.metaIso', { value: String(meta.measurementStartIso) }),
     );
   }
 
@@ -253,7 +256,7 @@ function buildMotion(
     }
   }
   if (!Number.isFinite(minStart) || !Number.isFinite(maxEnd)) {
-    throw new Error('states.csv 中没有可用的状态区间');
+    throw new Error(t('error.noStates'));
   }
 
   const startDay = Math.floor(toSimDay(minStart, measurementStart));

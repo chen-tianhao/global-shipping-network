@@ -21,7 +21,8 @@ import {
   portWaitingStops,
   toCss,
 } from '../../viewmodel/colorScales';
-import { el } from '../dom';
+import { el, elI18n } from '../dom';
+import { numberLocaleTag, t, translateDom, type MessageKey } from '../../i18n';
 import type { EventBus } from '../eventBus';
 import type { ChartAdapter, ChartHoverPayload, ChartSpec } from './chartAdapter';
 import { PlotlyAdapter } from './plotlyAdapter';
@@ -29,13 +30,15 @@ import { PlotlyAdapter } from './plotlyAdapter';
 type Tab = 'att' | 'ports' | 'od';
 
 export interface ChartPanel {
+  /** Re-label and re-render after a language change (axis titles are baked in). */
+  refresh(): void;
   dispose(): void;
 }
 
-const TAB_DEFS: Array<[Tab, string]> = [
-  ['att', 'ATT 时序'],
-  ['ports', '港口等待'],
-  ['od', 'OD 矩阵'],
+const TAB_DEFS: Array<[Tab, MessageKey]> = [
+  ['att', 'chart.tabAtt'],
+  ['ports', 'chart.tabPorts'],
+  ['od', 'chart.tabOd'],
 ];
 
 /**
@@ -64,14 +67,14 @@ export function createChartPanel(
   root.innerHTML = '';
   const panel = el('section', 'chart-panel');
   const header = el('header', 'chart-panel__header');
-  header.append(el('h2', 'chart-panel__title', '统计图表'));
+  header.append(elI18n('h2', 'chart-panel__title', 'chart.title'));
 
   const tabs = el('div', 'chart-panel__tabs');
   const availableTabs = window.matchMedia(NARROW_QUERY).matches
     ? TAB_DEFS.filter(([tab]) => tab !== 'od')
     : TAB_DEFS;
-  for (const [tab, label] of availableTabs) {
-    const button = el('button', 'chart-panel__tab', label);
+  for (const [tab, labelKey] of availableTabs) {
+    const button = elI18n('button', 'chart-panel__tab', labelKey);
     button.type = 'button';
     button.addEventListener('click', () => setTab(tab));
     buttons.set(tab, button);
@@ -79,11 +82,16 @@ export function createChartPanel(
   }
   header.append(tabs);
 
-  const collapse = el('button', 'chart-panel__collapse', '收起');
+  const collapse = el('button', 'chart-panel__collapse');
   collapse.type = 'button';
+  const syncCollapseLabel = () => {
+    const collapsed = panel.classList.contains('is-collapsed');
+    collapse.textContent = collapsed ? t('chart.expand') : t('chart.collapse');
+  };
+  syncCollapseLabel();
   collapse.addEventListener('click', () => {
-    const collapsed = panel.classList.toggle('is-collapsed');
-    collapse.textContent = collapsed ? '展开' : '收起';
+    panel.classList.toggle('is-collapsed');
+    syncCollapseLabel();
   });
   header.append(collapse);
 
@@ -119,9 +127,7 @@ export function createChartPanel(
 
     if (!spec) {
       body.innerHTML = '';
-      body.append(
-        el('p', 'chart-panel__empty', '统计 CSV 未加载，或该图表没有数据。'),
-      );
+      body.append(elI18n('p', 'chart-panel__empty', 'chart.empty'));
       eventsBound = false;
       return;
     }
@@ -129,7 +135,7 @@ export function createChartPanel(
     adapter.dispose(body);
     eventsBound = false;
     body.innerHTML = '';
-    body.append(el('p', 'chart-panel__empty', '正在加载图表库 …'));
+    body.append(elI18n('p', 'chart-panel__empty', 'chart.loading'));
 
     try {
       await adapter.render(body, spec);
@@ -143,7 +149,9 @@ export function createChartPanel(
         el(
           'p',
           'chart-panel__error',
-          `图表加载失败：${error instanceof Error ? error.message : String(error)}`,
+          t('chart.error', {
+            message: error instanceof Error ? error.message : String(error),
+          }),
         ),
       );
       console.error('[charts] render failed', error);
@@ -206,7 +214,10 @@ export function createChartPanel(
       }
       if (payload.category) {
         setHint(
-          `OD ${payload.category}：${fmt(payload.value)} TEU（起讫港已选中）`,
+          t('chart.hintOdCell', {
+            pair: payload.category,
+            value: fmt(payload.value),
+          }),
         );
       }
     }
@@ -219,21 +230,31 @@ export function createChartPanel(
       lastHoverAt = now;
       bus.emit('chart:hover', { series: 'att', day: Number(payload.day) });
       setHint(
-        `Day ${Math.round(Number(payload.day))} · 平均运输时间 ${fmt(
-          payload.value,
-          2,
-        )} 天`,
+        t('chart.hintAttHover', {
+          day: Math.round(Number(payload.day)),
+          value: fmt(payload.value, 2),
+        }),
       );
       return;
     }
 
     if (payload.series === 'ports') {
-      setHint(`${payload.category ?? ''}：${fmt(payload.value)} TEU`);
+      setHint(
+        t('chart.hintValue', {
+          name: payload.category ?? '',
+          value: fmt(payload.value),
+        }),
+      );
       return;
     }
 
     if (payload.series === 'od') {
-      setHint(`${payload.category ?? ''}：${fmt(payload.value)} TEU`);
+      setHint(
+        t('chart.hintValue', {
+          name: payload.category ?? '',
+          value: fmt(payload.value),
+        }),
+      );
     }
   }
 
@@ -245,12 +266,20 @@ export function createChartPanel(
       } else {
         void updateActive();
       }
-      setHint(`已选港口：${payload.label}`);
+      setHint(hintForSelection());
       return;
     }
-    if (payload) setHint(`已选：${payload.label}`);
-    else setHint(defaultHint());
+    setHint(hintForSelection());
     if (activeTab === 'ports') void updateActive();
+  }
+
+  /** Hint that matches the current selection, in the active language. */
+  function hintForSelection(): string {
+    if (selection?.kind === 'port') {
+      return t('chart.hintSelectedPort', { name: selection.label });
+    }
+    if (selection) return t('chart.hintSelected', { name: selection.label });
+    return defaultHint();
   }
 
   function setTime(day: number): void {
@@ -292,8 +321,8 @@ export function createChartPanel(
             color: '#4cc9f0',
           },
         ],
-        xTitle: '仿真天（Day）',
-        yTitle: '平均运输时间（天）',
+        xTitle: t('chart.attX'),
+        yTitle: t('chart.attY'),
         markerDay,
       };
     }
@@ -319,7 +348,7 @@ export function createChartPanel(
             ? '#ffd166'
             : toCss(portWaitingColor(row.totalTeu, stops)),
         ),
-        xTitle: '等待 TEU（全程均值）',
+        xTitle: t('chart.portsX'),
       };
     }
 
@@ -344,16 +373,19 @@ export function createChartPanel(
   }
 
   function defaultHint(): string {
-    if (activeTab === 'att') {
-      return '悬停曲线定位时间；竖线为当前时钟位置。';
-    }
-    if (activeTab === 'ports') {
-      return '点击柱状图选中港口，三维视图会同步高亮。';
-    }
-    return '点击矩阵单元选中起点港口；颜色为平均在途 TEU。';
+    if (activeTab === 'att') return t('chart.hintAtt');
+    if (activeTab === 'ports') return t('chart.hintPorts');
+    return t('chart.hintOd');
   }
 
   return {
+    refresh(): void {
+      translateDom(panel);
+      syncCollapseLabel();
+      setHint(hintForSelection());
+      // Axis titles are part of the chart spec, so the plot has to be rebuilt.
+      void renderActive();
+    },
     dispose(): void {
       offSelection();
       offTime();
@@ -364,7 +396,7 @@ export function createChartPanel(
 
 function fmt(value: number | undefined, digits = 0): string {
   if (!Number.isFinite(value)) return '—';
-  return Number(value).toLocaleString('zh-CN', {
+  return Number(value).toLocaleString(numberLocaleTag(), {
     minimumFractionDigits: digits,
     maximumFractionDigits: digits,
   });

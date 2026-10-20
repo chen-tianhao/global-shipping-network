@@ -23,6 +23,7 @@
  * primitive is hidden rather than drawn at (0, 0).
  */
 
+import { t } from '../../i18n';
 import {
   Cartesian3,
   Color,
@@ -59,7 +60,7 @@ const FALLBACK_COLOR = STATE_COLORS[3];
 
 export class VesselLayer implements SceneLayer {
   readonly id = 'vessels';
-  readonly label = '船舶';
+  get label(): string { return t('layer.vessels'); }
 
   private collection: PointPrimitiveCollection | null = null;
   private primitives: PointPrimitive[] = [];

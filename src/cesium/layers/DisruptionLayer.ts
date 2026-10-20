@@ -11,6 +11,7 @@
  * land-avoiding path the vessels actually sail.
  */
 
+import { t } from '../../i18n';
 import {
   Cartesian3,
   Color,
@@ -28,6 +29,7 @@ import {
   type Viewer,
 } from 'cesium';
 import { densifyGreatCircle } from '../../data/geo/geoMath';
+import { disruptionTitle } from '../../viewmodel/labels';
 import type { SceneModel } from '../../viewmodel/sceneModel';
 import { portById, segmentsBetween } from '../../viewmodel/sceneModel';
 import type { DisruptionVM, RouteSegmentVM } from '../../data/types';
@@ -48,7 +50,7 @@ interface Item {
 
 export class DisruptionLayer implements SceneLayer {
   readonly id = 'disruptions';
-  readonly label = '扰动事件';
+  get label(): string { return t('layer.disruptions'); }
 
   private points: PointPrimitiveCollection | null = null;
   private lines: PolylineCollection | null = null;
@@ -67,7 +69,8 @@ export class DisruptionLayer implements SceneLayer {
       const payload: PickPayload = {
         kind: 'disruption',
         id: disruption.id,
-        label: disruption.label ?? disruption.id,
+        // Derived, not stored: the globe label has to follow the locale.
+        label: disruptionTitle(disruption, model),
       };
       const item: Item = { disruption, payload, polylines: [] };
 
@@ -185,6 +188,18 @@ export class DisruptionLayer implements SceneLayer {
       if (item.point) item.point.show = active;
       for (const line of item.polylines) line.show = active;
       if (item.label) item.label.show = active;
+    }
+  }
+
+  /**
+   * Re-render the 3D labels in the active language. Everything else in this
+   * layer is geometry and needs no update.
+   */
+  relabel(model: SceneModel): void {
+    for (const item of this.items) {
+      const title = disruptionTitle(item.disruption, model);
+      item.payload.label = title;
+      if (item.label) item.label.text = title;
     }
   }
 

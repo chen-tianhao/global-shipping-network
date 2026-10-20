@@ -37,6 +37,15 @@
 - [ ] CI 串起 `typecheck → build → verify:motion → smoke`；`verify:geo` 在具备 numpy 的环境单独跑。
 - [ ] 统一规划文档与实际数据口径（20/22 港口、`disruptions.json`）。`RouteVM.capacityTeu` 已由 `Service_Route_Utilization.csv` 关联补齐。
 
+## 国际化（中英切换）
+
+- [x] 里程碑 1：字典 + 一键切换。`src/i18n/index.ts`（约 100 条，扁平字典、`{placeholder}` 插值、无依赖）+ 状态条 `EN`/`中文` 按钮；`?lang=en|zh` 可作为链接入口；选择写入 `localStorage['wsc.locale']`。
+- [x] 覆盖：静态标签走 `data-i18n` 就地改写（不重建 DOM，移动端抽屉面板不会被搬走）；状态相关文案走各模块 `refresh()`；图表坐标轴标题重绘当前页签；Cesium 扰动标签由 `DisruptionLayer.relabel()` 重写。
+- [x] 顺带清掉数据层硬编码文案：扰动 `label` 不再由 `staticDataProvider` 生成中文，改为 `viewmodel/labels.ts` 按当前语言派生（HUD 标题、悬浮提示、地球标签统一）。
+- [ ] 港口名 / 航线名仍是数据里的中文：英文界面下不翻译。若要做，需在数据侧加 `name_en` 字段并在 `labels.ts` 里按语言取值。
+- [ ] 第三语言：新增 `LOCALES` 项 + 一张 `Record<MessageKey, string>` 表即可，类型会强制补齐缺失键。
+- [ ] 浏览器语言兜底（当前刻意不做，避免 en-US 浏览器改变既有中文链接的观感）。
+
 ## 航线观感
 
 - [x] **B：渲染前加密**（commit 见 `fix/routes` 之后的提交）：`densifyGreatCircle` 按 50 km 采样，最长弦从 8,787 km 降到 50 km，消除"插进地球/边缘断开"。

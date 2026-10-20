@@ -9,6 +9,7 @@
  * receives the rings, which keeps `cesium/` free of file access.
  */
 
+import { t } from '../../i18n';
 import {
   Cartesian3,
   Color,
@@ -24,7 +25,7 @@ const COAST_COLOR = Color.fromCssColorString('#2f6f8f').withAlpha(0.9);
 
 export class CoastlineLayer implements SceneLayer {
   readonly id = 'coastline';
-  readonly label = '海岸线';
+  get label(): string { return t('layer.coastline'); }
 
   private collection: PolylineCollection | null = null;
   private visible = true;

@@ -35,6 +35,7 @@
  * or via a build-time env var. Never commit a real key.
  */
 
+import { t } from '../../i18n';
 import type { ImageryProvider } from 'cesium';
 import { Color } from 'cesium';
 
@@ -64,7 +65,7 @@ export const KEY_PLACEHOLDER =
  */
 export class NoneBaseLayerProvider implements BaseLayerProvider {
   readonly id = 'none';
-  readonly label = '无底图（纯色地球 + 自绘海岸线）';
+  get label(): string { return t('baseLayer.none'); }
   readonly requiresKey = false;
   readonly complianceNote = '不加载任何第三方瓦片，无 key、无瓦片合规负担，可离线运行。';
   readonly baseColor = Color.fromCssColorString('#0b1a2b');

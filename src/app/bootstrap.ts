@@ -36,6 +36,7 @@ import {
   disruptionPath,
   type SceneModel,
 } from '../viewmodel/sceneModel';
+import { kindLabel, payloadTitle } from '../viewmodel/labels';
 import type { PickPayload } from '../data/types';
 import { createEventBus } from '../ui/eventBus';
 import { createChartPanel } from '../ui/charts/chartPanel';
@@ -44,16 +45,20 @@ import { createMobileSheet, MOBILE_QUERY, type MobileSheet } from '../ui/mobileS
 import { createTimeBar } from '../ui/timeBar';
 import { createTooltip } from '../ui/tooltip';
 import { el } from '../ui/dom';
+import { initLocale, onLocaleChange, t } from '../i18n';
 import { describeBaseLayer, resolveConfig } from './config';
 
 export async function bootstrap(mount: {
   cesium: HTMLElement;
   ui: HTMLElement;
 }): Promise<void> {
+  // Resolve the language before anything renders: the dictionary is read while
+  // the HUD and the time bar are built.
+  initLocale();
   const config = resolveConfig();
   const bus = createEventBus();
 
-  const loading = el('div', 'overlay', '正在加载网络与仿真数据 …');
+  const loading = el('div', 'overlay', t('app.loading'));
   mount.ui.append(loading);
 
   // Separate mount points: createHud clears its root, and the chart panel owns
@@ -182,15 +187,19 @@ export async function bootstrap(mount: {
     const tooltip = createTooltip(mount.ui);
 
     const hud = createHud(hudRoot, model, layers, {
-      baseLayerLabel: bundle.baseLayerActive
-        ? describeBaseLayer(config)
-        : `${describeBaseLayer(config)}（无瓦片）`,
+      // Re-evaluated on every language change, so both names follow the locale.
+      describeContext: () => ({
+        base: bundle.baseLayerActive
+          ? describeBaseLayer(config)
+          : t('status.noTiles', { base: describeBaseLayer(config) }),
+        motion: motionProvider.isPlaceholder
+          ? t('status.motionPlaceholder')
+          : t('status.motionReal', {
+              start: Math.round(motion.startDay),
+              end: Math.round(motion.endDay),
+            }),
+      }),
       isPlaceholderMotion: motionProvider.isPlaceholder,
-      motionLabel: motionProvider.isPlaceholder
-        ? '占位合成'
-        : `真实轨迹 ${Math.round(motion.startDay)}…${Math.round(
-            motion.endDay,
-          )}`,
       showWarmUp: config.showWarmUp,
       warmUpDays,
       onToggleLayer: (id, visible) => {
@@ -204,6 +213,17 @@ export async function bootstrap(mount: {
     });
 
     const chartPanel = createChartPanel(chartRoot, model, bus);
+
+    // One subscription drives every dynamic label: static ones are re-written
+    // by translateDom inside setLocale, these three rebuild from their state.
+    onLocaleChange(() => {
+      hud.refresh();
+      timeBar.refresh();
+      chartPanel.refresh();
+      // 3D labels are primitives, not DOM: they need their text rewritten.
+      disruptionLayer.relabel(model);
+      viewer.scene.requestRender();
+    });
 
     // On phones the three floating panels cannot coexist (214 + 250 + 380 px
     // on a 390 px screen). Move them into one bottom sheet, details first.
@@ -257,6 +277,9 @@ export async function bootstrap(mount: {
       } else if (!narrowQuery.matches && sheet) {
         restoreFloatingLayout();
       }
+      // Phones keep the toggle in the status strip: the details panel is inside
+      // the sheet there, so a button in its header would need the sheet opened.
+      hud.setLanguageButtonPlacement(narrowQuery.matches ? 'header' : 'panel');
     }
 
     syncLayout();
@@ -366,7 +389,7 @@ export async function bootstrap(mount: {
           rect.top + position.y + 14,
         );
         tooltip.show(
-          `${kindLabel(payload.kind)} · ${payload.label}`,
+          `${kindLabel(payload.kind)} · ${payloadTitle(payload, model)}`,
           clientX,
           clientY,
         );
@@ -410,7 +433,11 @@ export async function bootstrap(mount: {
   } catch (error) {
     loading.remove();
     mount.ui.append(
-      el('div', 'overlay overlay--error', `初始化失败：${describe(error)}`),
+      el(
+        'div',
+        'overlay overlay--error',
+        t('app.error', { message: describe(error) }),
+      ),
     );
     throw error;
   }
@@ -435,13 +462,6 @@ function flyToSelection(
     const disruption = model.disruptions.find((item) => item.id === payload.id);
     if (disruption) flyToPoints(viewer, disruptionPath(model, disruption));
   }
-}
-
-function kindLabel(kind: PickPayload['kind']): string {
-  if (kind === 'port') return '港口';
-  if (kind === 'route') return '航线';
-  if (kind === 'vessel') return '船舶';
-  return '扰动';
 }
 
 function highlight(layers: SceneLayer[], ids: string[]): void {

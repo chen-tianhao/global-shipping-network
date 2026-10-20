@@ -14,6 +14,8 @@
  * independent of each other.
  */
 
+import { t } from '../i18n';
+
 export const MOBILE_QUERY = '(max-width: 640px)';
 
 export interface MobileSheet {
@@ -41,13 +43,15 @@ export function createMobileSheet(parent: HTMLElement): MobileSheet | null {
   handle.type = 'button';
   handle.className = 'mobile-sheet__handle';
   handle.setAttribute('aria-expanded', 'false');
-  handle.setAttribute('aria-label', '展开或收起详情、图层与图表');
+  handle.setAttribute('aria-label', t('sheet.aria'));
+  handle.dataset.i18nAria = 'sheet.aria';
 
   const grip = document.createElement('span');
   grip.className = 'mobile-sheet__grip';
   const label = document.createElement('span');
   label.className = 'mobile-sheet__label';
-  label.textContent = '详情 · 图层 · 图表';
+  label.textContent = t('sheet.label');
+  label.dataset.i18n = 'sheet.label';
   handle.append(grip, label);
 
   const dock = document.createElement('div');

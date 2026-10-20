@@ -9,6 +9,7 @@
  */
 
 import { BASE_LAYER_REGISTRY, type BaseLayerRuntimeConfig } from '../cesium/baseLayer/baseLayerProvider';
+import { t } from '../i18n';
 import type { TimeRange } from '../data/types';
 
 export interface AppConfig {
@@ -144,10 +145,10 @@ export function resolveConfig(): AppConfig {
 /** Human description of the active base map, for the HUD. */
 export function describeBaseLayer(config: AppConfig): string {
   const factory = BASE_LAYER_REGISTRY[config.baseLayerId];
-  if (!factory) return `未知底图 "${config.baseLayerId}"，已回退到 none`;
+  if (!factory) return t('baseLayer.unknown', { id: config.baseLayerId });
   const provider = factory();
   if (provider.requiresKey && !config.baseLayerConfig.apiKey) {
-    return `${provider.label}（缺少 key，已回退到无底图）`;
+    return t('baseLayer.missingKey', { label: provider.label });
   }
   return provider.label;
 }

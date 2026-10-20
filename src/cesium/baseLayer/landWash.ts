@@ -13,6 +13,7 @@
  * skipped entirely when a real imagery base map is active.
  */
 
+import { t } from '../../i18n';
 import {
   ImageryLayer,
   SingleTileImageryProvider,
@@ -23,7 +24,7 @@ import type { SceneLayer } from '../layers/SceneLayer';
 
 export class LandWashLayer implements SceneLayer {
   readonly id = 'landwash';
-  readonly label = '陆地底色';
+  get label(): string { return t('layer.landwash'); }
 
   private layer: ImageryLayer | null = null;
   private visible = true;

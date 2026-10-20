@@ -8,6 +8,7 @@
  * by colour and width - the primitive API has no dash material.
  */
 
+import { t } from '../../i18n';
 import {
   Cartesian3,
   Color,
@@ -32,7 +33,7 @@ const MAX_SEGMENT_KM = 50;
 
 export class RouteLayer implements SceneLayer {
   readonly id = 'routes';
-  readonly label = '航线';
+  get label(): string { return t('layer.routes'); }
 
   private collection: PolylineCollection | null = null;
   private visible = true;

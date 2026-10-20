@@ -8,6 +8,7 @@
  *  - widget chrome is trimmed to the timeline and animation controls.
  */
 
+import { t } from '../i18n';
 import {
   ClockRange,
   Color,
@@ -138,7 +139,7 @@ export async function createViewer(options: CreateViewerOptions): Promise<Viewer
 function installContextLossNotice(container: HTMLElement, viewer: Viewer): void {
   const notice = document.createElement('div');
   notice.className = 'gl-lost';
-  notice.textContent = '渲染上下文丢失，正在尝试恢复 …';
+  notice.textContent = t('globe.contextLost');
   notice.hidden = true;
   container.appendChild(notice);
 

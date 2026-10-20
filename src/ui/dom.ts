@@ -1,5 +1,7 @@
 /** Tiny DOM builders. No framework - the whole UI surface is a few panels. */
 
+import { t, type MessageKey } from '../i18n';
+
 export function el<K extends keyof HTMLElementTagNameMap>(
   tag: K,
   className?: string,
@@ -11,10 +13,27 @@ export function el<K extends keyof HTMLElementTagNameMap>(
   return node;
 }
 
-export function panel(title: string, ...children: HTMLElement[]): HTMLElement {
+/**
+ * Element whose text is a dictionary entry.
+ *
+ * Marking it with `data-i18n` lets `translateDom` re-label it in place when the
+ * language changes: no rebuild, so panels keep their parent (the mobile sheet
+ * moves them around) and their listeners.
+ */
+export function elI18n<K extends keyof HTMLElementTagNameMap>(
+  tag: K,
+  className: string | undefined,
+  key: MessageKey,
+  vars?: Record<string, string | number>,
+): HTMLElementTagNameMap[K] {
+  const node = el(tag, className, t(key, vars));
+  node.dataset.i18n = key;
+  return node;
+}
+
+export function panel(key: MessageKey, ...children: HTMLElement[]): HTMLElement {
   const root = el('section', 'panel');
-  const heading = el('h2', 'panel__title', title);
-  root.append(heading);
+  root.append(elI18n('h2', 'panel__title', key));
   for (const child of children) root.append(child);
   return root;
 }

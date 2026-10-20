@@ -127,7 +127,7 @@ function lineLayout(spec: LineChartSpec): Record<string, unknown> {
   return {
     ...BASE_LAYOUT,
     margin: { l: 46, r: 12, t: 8, b: 34 },
-    xaxis: axis(spec.xTitle ?? '仿真天（Day）'),
+    xaxis: axis(spec.xTitle ?? 'Day'),
     yaxis: axis(spec.yTitle),
     hovermode: 'x unified',
     shapes,

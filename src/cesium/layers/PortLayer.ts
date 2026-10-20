@@ -3,6 +3,7 @@
  * move, so the entity property system would be pure overhead.
  */
 
+import { t } from '../../i18n';
 import {
   Cartesian2,
   Cartesian3,
@@ -22,7 +23,7 @@ import type { PickPayload, SceneLayer } from './SceneLayer';
 
 export class PortLayer implements SceneLayer {
   readonly id = 'ports';
-  readonly label = '港口';
+  get label(): string { return t('layer.ports'); }
 
   private points: PointPrimitiveCollection | null = null;
   private labels: LabelCollection | null = null;

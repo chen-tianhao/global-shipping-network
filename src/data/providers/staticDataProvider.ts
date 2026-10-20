@@ -172,7 +172,6 @@ export class StaticDataProvider implements SimulationDataProvider {
         startDay: start,
         endDay: start + duration,
         magnitude: 1,
-        label: `${port} 关闭 ${duration} 天`,
       })),
       ...congested.map(([from, to, start, duration, mult], index) => ({
         id: `congested-${index}`,
@@ -181,7 +180,6 @@ export class StaticDataProvider implements SimulationDataProvider {
         startDay: start,
         endDay: start + duration,
         magnitude: mult,
-        label: `${from} → ${to} 航段拥堵 ×${mult}`,
       })),
     ];
   }

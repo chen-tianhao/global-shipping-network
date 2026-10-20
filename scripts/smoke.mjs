@@ -736,6 +736,19 @@ try {
     `);
   }
 
+  // Back to portrait: the checks below (language toggle size) assume the phone
+  // layout, and leaving the page in landscape would silently test the desktop
+  // breakpoint instead.
+  if (MOBILE) {
+    await cdp.send('Emulation.setDeviceMetricsOverride', {
+      width: 390,
+      height: 844,
+      deviceScaleFactor: 2,
+      mobile: true,
+    });
+    await sleep(500);
+  }
+
   // Optional close-up (`WSC_ZOOM=1`): the land wash exists so that land and
   // sea stay distinguishable when zoomed in, and that is impossible to judge
   // from a whole-globe screenshot.
@@ -824,6 +837,75 @@ try {
   `);
   }
 
+  // Language toggle: one click must rewrite static labels, the <title>, the
+  // chart tabs and the speed selector; the second click restores Chinese so
+  // everything below keeps working.
+  const localeProbe = await probe(`
+    (() => {
+      const button = document.querySelector('.hud__lang');
+      const speed = () => document.querySelector('.timebar__select');
+      const tab = () => document.querySelector('.chart-panel__tab');
+      const overlapsTimebar = () => {
+        const me = button?.getBoundingClientRect();
+        const bar = document.querySelector('.timebar')?.getBoundingClientRect();
+        if (!me || !bar) return false;
+        return !(
+          me.right <= bar.left ||
+          bar.right <= me.left ||
+          me.bottom <= bar.top ||
+          bar.bottom <= me.top
+        );
+      };
+      const placement = () =>
+        button?.closest('.panel__head')
+          ? 'panel'
+          : button?.closest('.hud--top')
+            ? 'header'
+            : 'other';
+      const snapshot = () => {
+        const rect = button?.getBoundingClientRect();
+        return {
+          lang: document.documentElement.lang,
+          placement: placement(),
+          overlapBar: overlapsTimebar(),
+          button: button?.textContent ?? '',
+          buttonRect: rect ? { w: Math.round(rect.width), h: Math.round(rect.height) } : null,
+          heading: document.querySelector('.hud__title')?.textContent ?? '',
+          subtitle: document.querySelector('.hud__subtitle')?.textContent ?? '',
+          speed: speed()?.selectedOptions?.[0]?.textContent ?? '',
+          speedValue: speed()?.value ?? '',
+          tab: tab()?.textContent ?? '',
+          legend: document.querySelector('.legend__title')?.textContent ?? '',
+          layer: document.querySelector('.toggle span')?.textContent ?? '',
+          panels: [...document.querySelectorAll('.panel__title')]
+            .map((node) => node.textContent)
+            .join('|'),
+          timeButton: document.querySelector('.timebar__button')?.textContent ?? '',
+          detailsInSheet: Boolean(
+            document.querySelector('.hud--right')?.closest('.mobile-sheet'),
+          ),
+          chartInSheet: Boolean(
+            document.querySelector('.chart-panel')?.closest('.mobile-sheet'),
+          ),
+          sheetOpen: document.querySelector('.mobile-sheet')?.dataset.open ?? '',
+          docTitle: document.title,
+        };
+      };
+      if (!button) return { ok: false };
+      const before = snapshot();
+      button.click();
+      return new Promise((resolve) => {
+        setTimeout(() => {
+          const english = snapshot();
+          button.click();
+          setTimeout(() => {
+            resolve({ ok: true, before, english, restored: snapshot() });
+          }, 500);
+        }, 700);
+      });
+    })()
+  `);
+
   const firstPositions = first.positions ?? [];
   const secondPositions = second.positions ?? [];
   let movedCount = 0;
@@ -873,6 +955,45 @@ try {
   if (pageErrors.length) {
     console.log('--- page errors ---');
     for (const line of pageErrors) console.log(line);
+  }
+
+  // Narrow desktop: at 1600 px the toggle could sit clear by luck, so re-check
+  // at a width where the centred time bar reaches the details panel.
+  let narrowLayout = null;
+  if (!MOBILE) {
+    await cdp.send('Emulation.setDeviceMetricsOverride', {
+      width: 1024,
+      height: 800,
+      deviceScaleFactor: 1,
+      mobile: false,
+    });
+    await sleep(700);
+    narrowLayout = await probe(`
+      (() => {
+        const button = document.querySelector('.hud__lang');
+        const bar = document.querySelector('.timebar');
+        if (!button || !bar) return null;
+        const me = button.getBoundingClientRect();
+        const rect = bar.getBoundingClientRect();
+        return {
+          placement: button.closest('.panel__head')
+            ? 'panel'
+            : button.closest('.hud--top')
+              ? 'header'
+              : 'other',
+          overlap: !(
+            me.right <= rect.left ||
+            rect.right <= me.left ||
+            me.bottom <= rect.top ||
+            rect.bottom <= me.top
+          ),
+          onScreen: me.right <= window.innerWidth && me.left >= 0,
+        };
+      })()
+    `);
+    await cdp.send('Emulation.clearDeviceMetricsOverride');
+    await sleep(400);
+    console.log('narrow desktop:', JSON.stringify(narrowLayout));
   }
 
   const failures = [];
@@ -1040,6 +1161,77 @@ try {
       failures.push(`OD tab did not activate (got "${odProbe.active}")`);
     }
   }
+  if (!MOBILE && (!narrowLayout || narrowLayout.overlap || !narrowLayout.onScreen)) {
+    failures.push(
+      `at 1024 px the language toggle is covered or off-screen (${JSON.stringify(narrowLayout)})`,
+    );
+  }
+  if (!localeProbe?.ok) {
+    failures.push('language toggle button (.hud__lang) is missing');
+  } else {
+    const { before, english, restored } = localeProbe;
+    if (before.lang !== 'zh-CN' || !before.heading.includes('全球')) {
+      failures.push(`default locale is not Chinese (${JSON.stringify(before)})`);
+    }
+    if (english.lang !== 'en') {
+      failures.push(`<html lang> is "${english.lang}" after switching to English`);
+    }
+    if (!english.heading.includes('Global') || !english.docTitle.includes('Global')) {
+      failures.push(`title/tab did not switch to English (${JSON.stringify(english)})`);
+    }
+    if (!english.tab.includes('ATT') || !english.speed.includes('h/s')) {
+      failures.push(`chart tabs / speed labels did not switch (${JSON.stringify(english)})`);
+    }
+    if (english.speed === before.speed) {
+      failures.push('speed labels stayed Chinese after switching');
+    }
+    if (english.speedValue !== before.speedValue) {
+      failures.push(`language switch changed the clock multiplier (${before.speedValue} -> ${english.speedValue})`);
+    }
+    if (!english.legend.includes('Ports') || !english.layer.match(/Routes|Ports|Vessels|Coastline|Land tint/)) {
+      failures.push(`legend / layer labels stayed Chinese (${JSON.stringify({ legend: english.legend, layer: english.layer })})`);
+    }
+    if (!english.panels.includes('Legend') || !english.panels.includes('Details')) {
+      failures.push(`panel titles stayed Chinese (${english.panels})`);
+    }
+    if (!english.timeButton.match(/Play|Pause/)) {
+      failures.push(`time bar button stayed Chinese (${english.timeButton})`);
+    }
+    if (MOBILE) {
+      // Rebuilding the panels would drop them out of the sheet: the language
+      // switch must only rewrite text.
+      if (!english.detailsInSheet || !english.chartInSheet) {
+        failures.push(
+          `language switch moved panels out of the sheet (${JSON.stringify({ details: english.detailsInSheet, chart: english.chartInSheet })})`,
+        );
+      }
+      if (english.sheetOpen !== before.sheetOpen) {
+        failures.push(
+          `language switch changed the sheet state ("${before.sheetOpen}" -> "${english.sheetOpen}")`,
+        );
+      }
+    }
+    const wantPlacement = MOBILE ? 'header' : 'panel';
+    if (before.placement !== wantPlacement) {
+      failures.push(
+        `language toggle is in "${before.placement}", expected "${wantPlacement}"`,
+      );
+    }
+    if (before.overlapBar || english.overlapBar) {
+      failures.push('language toggle sits under the time bar');
+    }
+    const size = before.buttonRect;
+    if (!size || size.w < 40 || size.h < 24) {
+      failures.push(`language toggle is not clickable (${JSON.stringify(size)})`);
+    }
+    if (MOBILE && (!size || size.h < 40)) {
+      failures.push(`mobile language toggle is below the touch target size (${JSON.stringify(size)})`);
+    }
+    if (restored.lang !== 'zh-CN' || !restored.heading.includes('全球')) {
+      failures.push(`switching back to Chinese failed (${JSON.stringify(restored)})`);
+    }
+  }
+
   if (!(second.day > first.day)) failures.push('clock is not advancing');
   if (first.skyBox !== 'none') failures.push('star sky box is present (should be disabled)');
   if (!moved) failures.push('vessels did not change position over 2.5 s');

@@ -5,7 +5,8 @@
  * simulation-specific read-out (day number, simulated date) and speed presets.
  */
 
-import { el } from './dom';
+import { el, elI18n } from './dom';
+import { t, translateDom, type MessageKey } from '../i18n';
 import { formatSimDate, formatSimDay } from '../cesium/clock';
 import type { SimDay } from '../data/types';
 
@@ -28,38 +29,51 @@ export interface TimeBar {
   setPlaying(playing: boolean): void;
   /** Expand or collapse the visible range when the warm-up toggle changes. */
   setRange(startDay: SimDay, endDay: SimDay): void;
+  /** Re-label after a language change (play state and read-out are dynamic). */
+  refresh(): void;
 }
 
 /** Sim-hours of simulated time per wall-clock second. */
-const SPEEDS: Array<{ label: string; hours: number }> = [
-  { label: '1 时/秒', hours: 1 },
-  { label: '6 时/秒', hours: 6 },
-  { label: '1 天/秒', hours: 24 },
-  { label: '3 天/秒', hours: 72 },
+const SPEEDS: Array<{ key: MessageKey; hours: number }> = [
+  { key: 'speed.hour1', hours: 1 },
+  { key: 'speed.hour6', hours: 6 },
+  { key: 'speed.day1', hours: 24 },
+  { key: 'speed.day3', hours: 72 },
 ];
 
 export function createTimeBar(root: HTMLElement, options: TimeBarOptions): TimeBar {
   let rangeStart = options.startDay;
   let rangeEnd = options.endDay;
+  /** Last day written to the read-out; re-used when the locale changes. */
+  let lastDay = rangeStart;
 
   const bar = el('div', 'timebar');
 
-  const playButton = el('button', 'timebar__button', options.playing ? '暂停' : '播放');
+  const playButton = el('button', 'timebar__button');
   let playing = options.playing;
+  const syncPlayLabel = () => {
+    playButton.textContent = playing ? t('time.pause') : t('time.play');
+  };
+  syncPlayLabel();
   playButton.addEventListener('click', () => {
     playing = !playing;
-    playButton.textContent = playing ? '暂停' : '播放';
+    syncPlayLabel();
     options.onPlayChange(playing);
   });
 
-  const nextDisruption = el('button', 'timebar__button', '下一扰动');
+  const nextDisruption = elI18n(
+    'button',
+    'timebar__button',
+    'time.nextDisruption',
+  );
   nextDisruption.addEventListener('click', () => options.onNextDisruption());
 
   const speedSelect = el('select', 'timebar__select');
   for (const speed of SPEEDS) {
     const option = el('option');
     option.value = String(speed.hours * 3600);
-    option.textContent = speed.label;
+    option.textContent = t(speed.key);
+    option.dataset.i18n = speed.key;
     speedSelect.append(option);
   }
   speedSelect.value = String(options.multiplier);
@@ -90,9 +104,12 @@ export function createTimeBar(root: HTMLElement, options: TimeBarOptions): TimeB
   root.append(bar);
 
   function renderReadout(day: SimDay): void {
-    readout.textContent = `${formatSimDay(day)} · ${formatSimDate(day)} / 至 Day ${Math.round(
-      rangeEnd,
-    )}`;
+    lastDay = day;
+    readout.textContent = t('time.readout', {
+      day: formatSimDay(day),
+      date: formatSimDate(day),
+      end: Math.round(rangeEnd),
+    });
   }
 
   let lastRendered = Number.NaN;
@@ -106,7 +123,7 @@ export function createTimeBar(root: HTMLElement, options: TimeBarOptions): TimeB
     },
     setPlaying(next: boolean): void {
       playing = next;
-      playButton.textContent = playing ? '暂停' : '播放';
+      syncPlayLabel();
     },
     setRange(startDay: SimDay, endDay: SimDay): void {
       rangeStart = startDay;
@@ -116,6 +133,11 @@ export function createTimeBar(root: HTMLElement, options: TimeBarOptions): TimeB
       slider.value = String(rangeStart);
       lastRendered = rangeStart;
       renderReadout(rangeStart);
+    },
+    refresh(): void {
+      translateDom(bar);
+      syncPlayLabel();
+      renderReadout(lastDay);
     },
   };
 }
