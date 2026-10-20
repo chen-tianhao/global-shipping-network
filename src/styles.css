@@ -535,7 +535,8 @@ body,
     border-top: 1px solid var(--panel-border);
     border-radius: 16px 16px 0 0;
     background: rgba(9, 20, 34, 0.97);
-    transform: translateY(calc(100% - 56px));
+    /* --dock-height is measured in JS: handle + time bar. */
+    transform: translateY(calc(100% - var(--dock-height, 104px)));
     transition: transform 220ms ease;
   }
 
@@ -552,7 +553,25 @@ body,
     background: transparent;
     color: var(--text-dim);
     font-size: 12px;
-    touch-action: manipulation;
+    /* The handle is a drag surface: no scroll or browser panning on it. */
+    touch-action: none;
+    cursor: grab;
+  }
+
+  /* Fixed strip under the handle; the body scrolls below it. */
+  .mobile-sheet__dock {
+    flex: none;
+    padding: 0 10px 8px;
+  }
+
+  .mobile-sheet .timebar {
+    position: static;
+    left: auto;
+    right: auto;
+    bottom: auto;
+    transform: none;
+    margin: 0;
+    width: auto;
   }
 
   .mobile-sheet__grip {

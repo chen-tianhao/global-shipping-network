@@ -43,6 +43,16 @@ const READY_TIMEOUT_MS = 45000;
 
 const profileDir = fs.mkdtempSync(path.join(os.tmpdir(), 'wsc-smoke-'));
 
+/**
+ * Screenshots are diagnostic, not assertions. `WSC_SHOTS=0` keeps the checks
+ * runnable in environments where writing PNGs is not allowed.
+ */
+const SAVE_SHOTS = process.env.WSC_SHOTS !== '0';
+function saveShot(name, base64) {
+  if (!SAVE_SHOTS) return;
+  fs.writeFileSync(path.join(process.cwd(), name), Buffer.from(base64, 'base64'));
+}
+
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -329,13 +339,37 @@ try {
       const warmUpToggle = Boolean(document.querySelector('.warmup-toggle'));
       const sheet = document.querySelector('.mobile-sheet');
 
+      // Visible globe window, in degrees. Framing bugs (antimeridian,
+      // portrait aspect) show up here immediately.
+      const viewRect = (() => {
+        const rectangle = w.viewer.camera.computeViewRectangle();
+        if (!rectangle) return null;
+        return [
+          Math.round(Cesium.Math.toDegrees(rectangle.west)),
+          Math.round(Cesium.Math.toDegrees(rectangle.south)),
+          Math.round(Cesium.Math.toDegrees(rectangle.east)),
+          Math.round(Cesium.Math.toDegrees(rectangle.north)),
+        ];
+      })();
+
       return {
         ready: true,
         viewport: { w: window.innerWidth, h: window.innerHeight },
+        viewRect,
+        cameraHeightKm: Math.round(w.viewer.camera.positionCartographic.height / 1000),
         sheet: Boolean(sheet),
         sheetOpen: Boolean(sheet && sheet.classList.contains('is-open')),
         sheetHasDetails: Boolean(sheet && sheet.querySelector('.details')),
         sheetHasCharts: Boolean(sheet && sheet.querySelector('.chart-panel')),
+        dockHasTimebar: Boolean(
+          sheet && sheet.querySelector('.mobile-sheet__dock .timebar'),
+        ),
+        timebarInViewport: (() => {
+          const bar = document.querySelector('.timebar');
+          if (!bar) return false;
+          const rect = bar.getBoundingClientRect();
+          return rect.top >= 0 && rect.bottom <= window.innerHeight + 1;
+        })(),
         maxOffRouteNm: Math.round(maxOffRouteNm),
         worstOffRoute,
         disruptionItems,
@@ -425,8 +459,7 @@ try {
       error instanceof Error ? error.message : error,
     );
   }
-  const outFile = path.join(process.cwd(), MOBILE ? 'smoke-mobile.png' : 'smoke-screenshot.png');
-  if (shot) fs.writeFileSync(outFile, Buffer.from(shot.data, 'base64'));
+  if (shot) saveShot(MOBILE ? 'smoke-mobile.png' : 'smoke-screenshot.png', shot.data);
 
   // Render throttling: a paused scene must stop drawing. Cesium's clock keeps
   // ticking every animation frame, so counting `postRender` over a quiet
@@ -510,36 +543,116 @@ try {
     );
   }
   if (interactionShot) {
-    fs.writeFileSync(
-      path.join(process.cwd(), MOBILE ? 'smoke-mobile-interaction.png' : 'smoke-interaction.png'),
-      Buffer.from(interactionShot.data, 'base64'),
+    saveShot(
+      MOBILE ? 'smoke-mobile-interaction.png' : 'smoke-interaction.png',
+      interactionShot.data,
     );
   }
 
   // Mobile: capture the sheet open, which is where details/layers/charts live.
+  let gesture = null;
   if (MOBILE) {
     await probe(`
       (() => {
-        document.querySelector('.mobile-sheet__handle')?.click();
+        const tap = (y) => {
+          const handle = document.querySelector('.mobile-sheet__handle');
+          if (!handle) return;
+          for (const type of ['pointerdown', 'pointerup']) {
+            handle.dispatchEvent(
+              new PointerEvent(type, {
+                bubbles: true,
+                cancelable: true,
+                pointerId: 1,
+                pointerType: 'touch',
+                clientY: y,
+              }),
+            );
+          }
+        };
+        tap(700);
         return true;
       })()
     `);
     await sleep(500);
     try {
       const sheetShot = await cdp.send('Page.captureScreenshot', { format: 'png' });
-      fs.writeFileSync(
-        path.join(process.cwd(), 'smoke-mobile-sheet.png'),
-        Buffer.from(sheetShot.data, 'base64'),
-      );
+      saveShot('smoke-mobile-sheet.png', sheetShot.data);
     } catch (error) {
       console.warn('sheet screenshot skipped:', error instanceof Error ? error.message : error);
     }
+
+    // Drag the handle instead of clicking it: down 320 px must close, up 320 px
+    // must open again. Synthetic PointerEvents exercise the same code path as
+    // a finger (capture is unavailable, which the handler tolerates).
+    gesture = await probe(`
+      (() => {
+        const handle = document.querySelector('.mobile-sheet__handle');
+        const sheet = document.querySelector('.mobile-sheet');
+        if (!handle || !sheet) return { ok: false };
+        const fire = (type, y) =>
+          handle.dispatchEvent(
+            new PointerEvent(type, {
+              bubbles: true,
+              cancelable: true,
+              pointerId: 1,
+              pointerType: 'touch',
+              clientY: y,
+            }),
+          );
+        const isOpen = () => sheet.classList.contains('is-open');
+
+        const before = isOpen();
+        fire('pointerdown', 200);
+        fire('pointermove', 360);
+        const midDrag = sheet.dataset.drag ?? null;
+        fire('pointermove', 520);
+        fire('pointerup', 520);
+        const afterDown = isOpen();
+
+        fire('pointerdown', 600);
+        fire('pointermove', 440);
+        fire('pointermove', 280);
+        fire('pointerup', 280);
+        const afterUp = isOpen();
+
+        return {
+          ok: true,
+          before,
+          afterDown,
+          afterUp,
+          dock: sheet.dataset.dock ?? null,
+          midDrag,
+          height: Math.round(sheet.offsetHeight),
+        };
+      })()
+    `);
+
+    // Leave the sheet closed for the rotation check.
     await probe(`
       (() => {
-        document.querySelector('.mobile-sheet__handle')?.click();
+        const sheet = document.querySelector('.mobile-sheet');
+        if (sheet && sheet.classList.contains('is-open')) {
+        const tap = (y) => {
+          const handle = document.querySelector('.mobile-sheet__handle');
+          if (!handle) return;
+          for (const type of ['pointerdown', 'pointerup']) {
+            handle.dispatchEvent(
+              new PointerEvent(type, {
+                bubbles: true,
+                cancelable: true,
+                pointerId: 1,
+                pointerType: 'touch',
+                clientY: y,
+              }),
+            );
+          }
+        };
+          tap(700);
+        }
         return true;
       })()
     `);
+    await sleep(300);
   }
 
   // Mobile rotation: 844x390 is wider than the 640 px breakpoint, so the app
@@ -588,10 +701,7 @@ try {
     await sleep(900);
     try {
       const zoomShot = await cdp.send('Page.captureScreenshot', { format: 'png' });
-      fs.writeFileSync(
-        path.join(process.cwd(), 'smoke-zoom.png'),
-        Buffer.from(zoomShot.data, 'base64'),
-      );
+      saveShot('smoke-zoom.png', zoomShot.data);
 
       // 2x crop around the view centre: texture resolution and edge alignment
       // are only judgeable at pixel level.
@@ -599,10 +709,7 @@ try {
         format: 'png',
         clip: { x: 300, y: 80, width: 520, height: 360, scale: 2 },
       });
-      fs.writeFileSync(
-        path.join(process.cwd(), 'smoke-zoom-detail.png'),
-        Buffer.from(detail.data, 'base64'),
-      );
+      saveShot('smoke-zoom-detail.png', detail.data);
 
       // Same camera, wash switched off: an A/B for how much contrast the tile
       // actually adds, and the fastest way to tell a texture artefact from a
@@ -620,10 +727,7 @@ try {
         format: 'png',
         clip: { x: 300, y: 80, width: 520, height: 360, scale: 2 },
       });
-      fs.writeFileSync(
-        path.join(process.cwd(), 'smoke-zoom-nowash.png'),
-        Buffer.from(noWash.data, 'base64'),
-      );
+      saveShot('smoke-zoom-nowash.png', noWash.data);
       await probe(`
         (() => {
           const w = window.__WSC__;
@@ -693,6 +797,7 @@ try {
         movedCount,
         idleFrames: idle.frames,
         interaction,
+        gesture,
         rotation,
         odProbe,
       },
@@ -700,7 +805,11 @@ try {
       2,
     ),
   );
-  console.log(`screenshot -> ${outFile}`);
+  console.log(
+    SAVE_SHOTS
+      ? `screenshot -> ${MOBILE ? 'smoke-mobile.png' : 'smoke-screenshot.png'}`
+      : 'screenshot skipped (WSC_SHOTS=0)',
+  );
   if (consoleErrors.length) {
     console.log('--- console errors/warnings ---');
     for (const line of consoleErrors) console.log(line);
@@ -762,6 +871,12 @@ try {
     if (!first.sheetHasCharts) {
       failures.push('mobile layout: chart panel was not moved into the sheet');
     }
+    if (!first.dockHasTimebar) {
+      failures.push('mobile layout: the time bar is not docked in the sheet');
+    }
+    if (!first.timebarInViewport) {
+      failures.push('mobile layout: the time bar is outside the viewport');
+    }
     if (
       rotation &&
       (rotation.sheet || rotation.detailsInSheet || rotation.chartInSheet)
@@ -769,6 +884,19 @@ try {
       failures.push(
         `landscape rotation did not restore the floating layout (${JSON.stringify(rotation)})`,
       );
+    }
+    if (!gesture || !gesture.ok) {
+      failures.push('mobile sheet: the drag probe could not run');
+    } else {
+      if (!gesture.before) {
+        failures.push('mobile sheet: expected it to be open before the drag test');
+      }
+      if (gesture.afterDown) {
+        failures.push('mobile sheet: dragging the handle down did not close it');
+      }
+      if (!gesture.afterUp) {
+        failures.push('mobile sheet: dragging the handle up did not open it');
+      }
     }
   } else if (first.sheet) {
     failures.push('desktop layout: the mobile sheet should not exist');

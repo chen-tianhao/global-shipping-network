@@ -218,7 +218,17 @@ export async function bootstrap(mount: {
       const layersPanel = hudRoot.querySelector('.hud--left');
       if (detailsPanel) next.body.append(detailsPanel);
       if (layersPanel) next.body.append(layersPanel);
+      // The time bar sits in the dock, not the scrolling body: it has to stay
+      // reachable while the sheet is open, and it must not be pushed off
+      // screen by a long details panel.
+      next.dock.append(timeBarRoot);
       next.body.append(chartRoot);
+    }
+
+    /** Handle + dock decide how much stays visible when collapsed. */
+    function syncDockHeight(): void {
+      if (!sheet) return;
+      sheet.setDockHeight(sheet.handle.offsetHeight + sheet.dock.offsetHeight);
     }
 
     function restoreFloatingLayout(): void {
@@ -228,6 +238,7 @@ export async function bootstrap(mount: {
       // Re-append into the original hosts, then let the sheet go.
       if (layersPanel) hudRoot.append(layersPanel);
       if (detailsPanel) hudRoot.append(detailsPanel);
+      mount.ui.append(timeBarRoot);
       mount.ui.append(chartRoot);
       sheet.element.remove();
       sheet = null;
@@ -236,7 +247,13 @@ export async function bootstrap(mount: {
     function syncLayout(): void {
       if (narrowQuery.matches && !sheet) {
         sheet = createMobileSheet(mount.ui);
-        if (sheet) moveIntoSheet(sheet);
+        if (sheet) {
+          moveIntoSheet(sheet);
+          // Measure now (offsetHeight forces layout) and again after the first
+          // frame, which is when web fonts have settled the row height.
+          syncDockHeight();
+          requestAnimationFrame(syncDockHeight);
+        }
       } else if (!narrowQuery.matches && sheet) {
         restoreFloatingLayout();
       }
@@ -244,6 +261,7 @@ export async function bootstrap(mount: {
 
     syncLayout();
     narrowQuery.addEventListener('change', syncLayout);
+    window.addEventListener('resize', syncDockHeight);
 
     // ---- event wiring -----------------------------------------------------
     bus.on('selection:changed', ({ payload, source, ids }) => {
