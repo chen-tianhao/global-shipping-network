@@ -649,7 +649,7 @@ def dedupe(points, min_km: float = 0.4):
     return out
 
 
-def collapse_retraces(points, tol_km: float = 0.5, lookback: int = 30):
+def collapse_retraces(points, tol_km: float = 1.5, lookback: int = 30):
     """Remove out-and-back spikes where the path retraces its own steps.
 
     When a route visits a port off the main track and both the approach and
@@ -658,6 +658,11 @@ def collapse_retraces(points, tol_km: float = 0.5, lookback: int = 30):
     exactly the same points.  This walks the chain, detects such retraces and
     deletes them so the drawn route passes through the corridor once.
 
+    * ``tol_km`` is 1.5 km rather than point-exact because snap_to_gates
+      re-projects arrival and departure vertices onto the port gate
+      centreline independently, so the two "same" endpoints can land up to
+      ~1 km apart.  A tighter tolerance (0.5 km) misses these and the
+      hairpin survives into the output (Jebel Ali 177 km spike).
     * ``lookback`` is deliberately small: it must catch a local spike (a port
       detour is ~10-20 vertices) but never a round-trip route whose last
       vertex legitimately coincides with its first.
