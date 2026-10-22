@@ -126,6 +126,64 @@ console.log(
 );
 
 // ---------------------------------------------------------------------------
+// Carve the waterways.
+//
+// The router treats the canal/strait corridors as open water (that is the only
+// way a 0.25 deg grid can cross Suez or Malacca), so the land tint has to show
+// water there as well - otherwise every route runs across a painted continent
+// at each chokepoint. The geometry comes from build_geo, so both sides share
+// one definition of where the channel is.
+// ---------------------------------------------------------------------------
+
+const WATERWAYS = args.get('waterways')
+  ? path.resolve(repoRoot, args.get('waterways'))
+  : path.join(repoRoot, 'public/data/waterways.json');
+
+if (fs.existsSync(WATERWAYS)) {
+  const { widthKm, lines } = JSON.parse(fs.readFileSync(WATERWAYS, 'utf8'));
+  const halfKm = (Number(widthKm) || 18) / 2;
+
+  for (const { points } of lines) {
+    for (let i = 1; i < points.length; i += 1) {
+      const [lonA, latA] = points[i - 1];
+      const [lonB, latB] = points[i];
+      const pxA = ((lonA + 180) / 360) * WIDTH;
+      const pxB = ((lonB + 180) / 360) * WIDTH;
+      const pyA = ((90 - latA) / 180) * HEIGHT;
+      const pyB = ((90 - latB) / 180) * HEIGHT;
+      const steps = Math.max(2, Math.ceil(Math.hypot(pxB - pxA, pyB - pyA)));
+
+      for (let s = 0; s <= steps; s += 1) {
+        const f = s / steps;
+        const lon = lonA + (lonB - lonA) * f;
+        const lat = latA + (latB - latA) * f;
+        // km -> pixel; a degree of longitude shrinks with cos(lat)
+        const cosLat = Math.max(0.15, Math.cos((lat * Math.PI) / 180));
+        const rx = (halfKm / (111.32 * cosLat)) * (WIDTH / 360);
+        const ry = (halfKm / 111.32) * (HEIGHT / 180);
+        const cx = ((lon + 180) / 360) * WIDTH;
+        const cy = ((90 - lat) / 180) * HEIGHT;
+
+        const y0 = Math.max(0, Math.floor(cy - ry));
+        const y1 = Math.min(HEIGHT - 1, Math.ceil(cy + ry));
+        for (let y = y0; y <= y1; y += 1) {
+          const dy = (y + 0.5 - cy) / Math.max(1e-6, ry);
+          if (Math.abs(dy) > 1) continue;
+          const dx = rx * Math.sqrt(1 - dy * dy);
+          const x0 = Math.max(0, Math.floor(cx - dx));
+          const x1 = Math.min(WIDTH - 1, Math.ceil(cx + dx));
+          const base = y * WIDTH;
+          for (let x = x0; x <= x1; x += 1) coverage[base + x] = 0;
+        }
+      }
+    }
+  }
+  console.log(
+    `build_landmask: carved ${lines.length} waterways at ${widthKm} km wide`,
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Feather: box blur, then clamp to the binary coverage so the fade only ever
 // happens on the land side.
 // ---------------------------------------------------------------------------

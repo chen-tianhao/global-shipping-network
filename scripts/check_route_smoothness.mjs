@@ -31,6 +31,11 @@ const MAX_TURN_DEG = Number(args.get('max-turn') ?? 60);
 const MAX_TURN_BUDGET = Number(args.get('max-turn-budget') ?? 90);
 const LONG_LEG_KM = 400;
 const LONG_LEG_TURN_DEG = Number(args.get('max-long-turn') ?? 20);
+// A >=150 deg turn where BOTH adjacent legs exceed this length is a real
+// route turnaround (rounding a cape, entering a gulf) rather than a splice
+// artifact.  Below this threshold the reversal is almost always a hairpin
+// left by a port-gate join and must be flagged.
+const REVERSAL_LONG_KM = 30;
 
 const R = 6371.0088;
 const rad = (d) => (d * Math.PI) / 180;
@@ -85,8 +90,17 @@ for (const route of routes) {
     const turn = turnDeg(w[i - 1], w[i], w[i + 1]);
     const where = `${route.id} ${w[i][0].toFixed(2)},${w[i][1].toFixed(2)}`;
     if (turn >= 150) {
-      reversals += 1;
-      problems.push(`${where}: reversal ${turn.toFixed(0)} deg`);
+      // A reversal between two long legs is a legitimate turnaround (the
+      // route rounds a cape or enters a dead-end gulf); only short-leg
+      // reversals are splice artifacts.
+      const legit = before > REVERSAL_LONG_KM && after > REVERSAL_LONG_KM;
+      if (!legit) {
+        reversals += 1;
+        problems.push(
+          `${where}: reversal ${turn.toFixed(0)} deg` +
+            ` (${Math.round(before)}/${Math.round(after)} km legs)`,
+        );
+      }
     } else if (before > LONG_LEG_KM && after > LONG_LEG_KM && turn > LONG_LEG_TURN_DEG) {
       longCorners += 1;
       problems.push(

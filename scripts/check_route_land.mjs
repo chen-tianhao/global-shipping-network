@@ -172,6 +172,13 @@ const worst = runs[0];
 console.log(`check:routes  ${Math.round(totalKm).toLocaleString('en-US')} km sampled at 2 km`);
 console.log(`  on displayed land : ${Math.round(landKm)} km (${percent.toFixed(2)} %)`);
 console.log(`  longest run       : ${worst ? `${Math.round(worst.km)} km at ${worst.route} ${worst.lon.toFixed(2)},${worst.lat.toFixed(2)}` : 'none'}`);
+if (runs.length > 1) {
+  const top = runs
+    .slice(1, 5)
+    .map((r) => `${Math.round(r.km)} km ${r.route} ${r.lon.toFixed(1)},${r.lat.toFixed(1)}`)
+    .join(' | ');
+  console.log(`  next longest      : ${top}`);
+}
 
 const failures = [];
 if (percent > MAX_PERCENT) {
