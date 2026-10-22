@@ -21,7 +21,9 @@ import type { CoastlineRings } from '../../data/loaders/coastlineLoader';
 import type { SceneModel } from '../../viewmodel/sceneModel';
 import type { SceneLayer } from '../layers/SceneLayer';
 
-const COAST_COLOR = Color.fromCssColorString('#2f6f8f').withAlpha(0.9);
+// Lighter than the land tint so the shore still reads as an edge on a dark
+// green continent.
+const COAST_COLOR = Color.fromCssColorString('#4d8a6a').withAlpha(0.9);
 
 export class CoastlineLayer implements SceneLayer {
   readonly id = 'coastline';

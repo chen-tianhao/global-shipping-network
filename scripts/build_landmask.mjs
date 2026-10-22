@@ -14,7 +14,7 @@
  *
  * Usage:
  *   node scripts/build_landmask.mjs [--width 4096] [--height 2048]
- *                                   [--feather 1] [--color 1C3141]
+ *                                   [--feather 1] [--color 264F3D]
  *
  * 4096x2048 is ~0.088 deg/px (~10 km). That is enough to keep archipelagos
  * from smearing into blobs at regional zoom; 2048 wide (~20 km/px) did smear
@@ -43,7 +43,7 @@ const WIDTH = Number(args.get('width') ?? 4096);
 const HEIGHT = Number(args.get('height') ?? 2048);
 const FEATHER = Number(args.get('feather') ?? 1);
 const OUT = args.get('out') ? path.resolve(repoRoot, args.get('out')) : DEFAULT_OUT;
-const COLOR = hexToRgb(args.get('color') ?? '1C3141');
+const COLOR = hexToRgb(args.get('color') ?? '264F3D');
 
 if (!Number.isInteger(WIDTH) || !Number.isInteger(HEIGHT) || WIDTH < 256 || HEIGHT < 128) {
   console.error('build_landmask: width/height must be integers >= 256x128');

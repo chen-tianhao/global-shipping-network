@@ -66,7 +66,7 @@ export class RouteLayer implements SceneLayer {
 
       this.collection.add({
         positions,
-        width: route.isAlternative ? 1.5 : 2.5,
+        width: route.isAlternative ? 1.1 : 1.8,
         loop: closed,
         id: payload,
         material: Material.fromType('Color', { color }),
