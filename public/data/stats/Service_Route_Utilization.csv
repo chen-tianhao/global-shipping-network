@@ -1,29 +1,59 @@
 Route,Name,Avg Capacity TEU,Avg Carried TEU,Utilization
-S1,Asia-Europe-NorthEurope,"65,886","4,592",6.97%
-S1-ALT-1,Asia-Europe-NorthEurope Disruption Alternative,"17,971",0,0.00%
-S1-ALT-2,Asia-Europe-NorthEurope Disruption Alternative,"17,966",0,0.00%
-S1-ALT-3,Asia-Europe-NorthEurope Disruption Alternative,"18,000",0,0.00%
-S1-ALT-6,Asia-Europe-NorthEurope Disruption Alternative,"17,985",0,0.00%
-S1-ALT-7,Asia-Europe-NorthEurope Disruption Alternative,"25,173",0,0.00%
-S10,Straits-Indonesia-Regional,730,201,27.48%
-S11,NorthEurope-Regional,661,98,14.86%
-S12,SouthChina-Straits-Regional,"2,808","1,154",41.09%
-S12-ALT-1,SouthChina-Straits-Regional Disruption Alternative,"2,787",0,0.00%
-S13,EastChina-Taiwan-Coastal,"2,223",177,7.95%
-S14,Straits-SouthChina-Regional,"1,868",546,29.24%
-S14-ALT-2,Straits-SouthChina-Regional Disruption Alternative,"2,783",0,0.00%
-S14-ALT-3,Straits-SouthChina-Regional Disruption Alternative,"2,749",0,0.00%
-S14-ALT-4,Straits-SouthChina-Regional Disruption Alternative,"2,737",0,0.00%
-S2,Intra-EastAsia,"12,476","1,057",8.47%
-S3,Mekong-Regional-Feeder,"2,359",257,10.88%
-S4,Transpacific-South,"50,954","1,043",2.05%
-S5,Asia-US-East,"88,837","1,427",1.61%
-S5-ALT-2,Asia-US-East Disruption Alternative,"12,971",0,0.00%
-S5-ALT-5,Asia-US-East Disruption Alternative,"12,898",0,0.00%
-S6,Transatlantic-Caribbean,"17,533",792,4.51%
-S6-ALT-1,Transatlantic-Caribbean Disruption Alternative,"13,899",0,0.00%
-S6-ALT-2,Transatlantic-Caribbean Disruption Alternative,"7,990",0,0.00%
-S7,IndianOcean-Gulf-EastMed,"38,428","1,353",3.52%
-S8,Indonesia-Regional-Feeder,"1,506",93,6.17%
-S9,Transpacific-North,"50,412",429,0.85%
-TOTAL,,"492,590","13,217",2.68%
+S1,Asia-Europe-NorthEurope,"116,623","30,060",25.78%
+S1-ALT-1,Asia-Europe-NorthEurope Disruption Alternative,"17,985",0,0.00%
+S1-ALT-4,Asia-Europe-NorthEurope Disruption Alternative,"17,949",0,0.00%
+S1-ALT-8,Asia-Europe-NorthEurope Disruption Alternative,"17,753",0,0.00%
+S10,Straits-Indonesia-Regional,732,45,6.17%
+S11,NorthEurope-Regional,611,114,18.71%
+S12,SouthChina-Straits-Regional,"2,387","2,007",84.10%
+S12-ALT-1,SouthChina-Straits-Regional Disruption Alternative,"2,778",0,0.00%
+S13,EastChina-Taiwan-Coastal,"1,951",311,15.95%
+S14,Straits-SouthChina-Regional,614,"1,404",228.62%
+S14-ALT-2,Straits-SouthChina-Regional Disruption Alternative,"2,785",0,0.00%
+S14-ALT-3,Straits-SouthChina-Regional Disruption Alternative,"3,985",0,0.00%
+S14-ALT-4,Straits-SouthChina-Regional Disruption Alternative,"2,725",0,0.00%
+S15,EastAsia-NorthEurope-UK,"133,279","12,544",9.41%
+S16,EastAsia-Mediterranean,"60,304","17,719",29.38%
+S16-ALT-2,EastAsia-Mediterranean Disruption Alternative,"12,949",0,0.00%
+S16-ALT-3,EastAsia-Mediterranean Disruption Alternative,"12,968",0,0.00%
+S16-ALT-5,EastAsia-Mediterranean Disruption Alternative,"12,942",0,0.00%
+S16-ALT-6,EastAsia-Mediterranean Disruption Alternative,"12,956",0,0.00%
+S17,SoutheastAsia-NorthEurope,"48,854","3,704",7.58%
+S18,EastAsia-PacificNorthwest,"60,781","6,070",9.99%
+S19,SouthChina-PacificWestCoast,"60,199","10,337",17.17%
+S2,Intra-EastAsia,"7,517","3,878",51.60%
+S20,EastAsia-USEast-Panama,"93,736","23,313",24.87%
+S21,NorthEurope-USEast,"24,243","3,168",13.07%
+S21-ALT-1,NorthEurope-USEast Disruption Alternative,"7,949",0,0.00%
+S22,Mediterranean-USGulf,"29,223","7,068",24.19%
+S23,EastAsia-SouthAmericaWest,"60,925","11,569",18.99%
+S24,Europe-SouthAmericaEast,"29,959","5,397",18.01%
+S25,Caribbean-SouthAmericaWest,"8,404",527,6.27%
+S26,SoutheastAsia-EastAfrica,"13,771","2,660",19.31%
+S27,EastAsia-SouthAfrica,"44,247","8,279",18.71%
+S28,Europe-WestAfrica,"13,864","2,545",18.36%
+S29,Africa-Regional,"23,055","5,256",22.80%
+S3,Mekong-Regional-Feeder,"2,135",558,26.14%
+S30,EastAsia-Australia,"35,512","5,671",15.97%
+S30-ALT-2,EastAsia-Australia Disruption Alternative,"7,860",0,0.00%
+S31,SoutheastAsia-Australia,"18,244","4,780",26.20%
+S32,Australia-Coastal,"2,197",368,16.74%
+S33,IndiaWest-Regional,"4,619","1,116",24.16%
+S34,Gulf-India-Regional,"8,534","1,803",21.12%
+S35,Mediterranean-Regional,"4,678",820,17.52%
+S36,USEast-Gulf-Caribbean,"13,482","1,727",12.81%
+S37,Straits-Hub-Feeder,516,78,15.08%
+S38,IndianOcean-Hub-Feeder,"4,978",880,17.68%
+S39,Tanger-Europe-Feeder,"4,953",826,16.67%
+S4,Transpacific-South,"60,886","10,212",16.77%
+S40,Caribbean-CentralAmerica-Feeder,"4,811","1,343",27.92%
+S5,Asia-US-East,"95,543","20,226",21.17%
+S5-ALT-2,Asia-US-East Disruption Alternative,"12,970",0,0.00%
+S5-ALT-4,Asia-US-East Disruption Alternative,"18,602",0,0.00%
+S6,Transatlantic-Caribbean,"27,942","4,760",17.03%
+S6-ALT-2,Transatlantic-Caribbean Disruption Alternative,"7,937",0,0.00%
+S6-ALT-4,Transatlantic-Caribbean Disruption Alternative,"8,000",0,0.00%
+S7,IndianOcean-Gulf-EastMed,"36,210","6,184",17.08%
+S8,Indonesia-Regional-Feeder,"1,301",298,22.90%
+S9,Transpacific-North,"55,889","5,050",9.04%
+TOTAL,,"1,398,803","224,675",16.06%

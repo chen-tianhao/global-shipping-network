@@ -5,7 +5,7 @@
       "name": "Shanghai",
       "lon": 121.6,
       "lat": 31.2,
-      "berthCount": 3,
+      "berthCount": 4,
       "coordsVerified": true,
       "note": "外高桥港区/长江口",
       "tunnelledToSea": false
@@ -15,7 +15,7 @@
       "name": "Singapore",
       "lon": 103.8,
       "lat": 1.26,
-      "berthCount": 3,
+      "berthCount": 5,
       "coordsVerified": true,
       "note": "PSA 丹戎巴葛-巴西班让",
       "tunnelledToSea": false
@@ -45,7 +45,7 @@
       "name": "Busan",
       "lon": 128.83,
       "lat": 35.06,
-      "berthCount": 2,
+      "berthCount": 3,
       "coordsVerified": true,
       "note": "釜山新港",
       "tunnelledToSea": true
@@ -115,7 +115,7 @@
       "name": "Colombo",
       "lon": 79.84,
       "lat": 6.95,
-      "berthCount": 2,
+      "berthCount": 4,
       "coordsVerified": true,
       "note": "斯里兰卡科伦坡港",
       "tunnelledToSea": true
@@ -135,7 +135,7 @@
       "name": "Rotterdam",
       "lon": 4.08,
       "lat": 51.95,
-      "berthCount": 3,
+      "berthCount": 4,
       "coordsVerified": true,
       "note": "马斯夫拉克特港区",
       "tunnelledToSea": true
@@ -175,7 +175,7 @@
       "name": "New Jersey",
       "lon": -74.08,
       "lat": 40.67,
-      "berthCount": 2,
+      "berthCount": 3,
       "coordsVerified": true,
       "note": "纽约-新泽西港区",
       "tunnelledToSea": false
@@ -185,7 +185,7 @@
       "name": "Tanger Med",
       "lon": -5.5,
       "lat": 35.88,
-      "berthCount": 2,
+      "berthCount": 4,
       "coordsVerified": true,
       "note": "摩洛哥丹吉尔地中海港",
       "tunnelledToSea": false
@@ -195,7 +195,7 @@
       "name": "Cartagena",
       "lon": -75.51,
       "lat": 10.4,
-      "berthCount": 1,
+      "berthCount": 3,
       "coordsVerified": true,
       "note": "哥伦比亚卡塔赫纳港",
       "tunnelledToSea": true
