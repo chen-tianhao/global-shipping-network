@@ -110,7 +110,7 @@ const ZH = {
 
   'chart.title': '统计图表',
   'chart.tabAtt': 'ATT 时序',
-  'chart.tabPorts': '港口等待',
+  'chart.tabPorts': '港口活动',
   'chart.tabOd': 'OD 矩阵',
   'chart.collapse': '收起',
   'chart.expand': '展开',
@@ -236,7 +236,7 @@ const EN: Record<MessageKey, string> = {
 
   'chart.title': 'Statistics',
   'chart.tabAtt': 'ATT over time',
-  'chart.tabPorts': 'Port waiting',
+  'chart.tabPorts': 'Port activity',
   'chart.tabOd': 'OD matrix',
   'chart.collapse': 'Collapse',
   'chart.expand': 'Expand',

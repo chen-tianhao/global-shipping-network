@@ -409,7 +409,7 @@ body,
 }
 
 .chart-panel__body {
-  height: 250px;
+  height: 300px;
 }
 
 .chart-panel__hint {
@@ -704,7 +704,7 @@ body,
   }
 
   .mobile-sheet .chart-panel__body {
-    height: 220px;
+    height: 264px;
   }
 
   /* Touch targets: 44 px is the accepted minimum */

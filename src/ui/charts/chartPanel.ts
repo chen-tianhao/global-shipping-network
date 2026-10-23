@@ -36,8 +36,8 @@ export interface ChartPanel {
 }
 
 const TAB_DEFS: Array<[Tab, MessageKey]> = [
-  ['att', 'chart.tabAtt'],
   ['ports', 'chart.tabPorts'],
+  ['att', 'chart.tabAtt'],
   ['od', 'chart.tabOd'],
 ];
 
@@ -107,7 +107,7 @@ export function createChartPanel(
     setTime(day);
   });
 
-  setTab('att');
+  setTab('ports');
 
   function setTab(tab: Tab): void {
     if (tab === activeTab && eventsBound) {
@@ -140,6 +140,9 @@ export function createChartPanel(
     try {
       await adapter.render(body, spec);
       if (token !== renderToken) return;
+      // Plotly.newPlot appends its own DOM without removing the loading
+      // placeholder, so clear it explicitly after a successful render.
+      body.querySelector('.chart-panel__empty')?.remove();
       bindEvents();
       setHint(defaultHint());
     } catch (error) {

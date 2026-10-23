@@ -143,6 +143,7 @@ function barLayout(spec: BarChartSpec): Record<string, unknown> {
       autorange: 'reversed',
       tickfont: { size: 9 },
       automargin: true,
+      dtick: 1,
     }),
     bargap: 0.25,
   };
