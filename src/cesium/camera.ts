@@ -16,6 +16,15 @@ import { CAMERA_PRESETS, type CameraPreset } from '../viewmodel/cameraPresets';
 
 const DEFAULT_PADDING = 0.12;
 
+/**
+ * Home-centre anchor. The network is Pacific-spanning; a geometric midpoint
+ * falls somewhere in the ocean with no visual anchor. Singapore (1.35°N,
+ * 103.82°E) is the busiest transhipment hub in the dataset and sits near the
+ * centre of the Asian shipping lanes, so it is the natural "home" reference.
+ */
+const HOME_LON = 103.82;
+const HOME_LAT = 1.35;
+
 /** Frame every port in the network. */
 export function flyToHome(viewer: Viewer, ports: PortVM[]): void {
   const rectangle = boundsOf(ports.map((port) => [port.lon, port.lat]));
@@ -96,14 +105,8 @@ function flyToRectangle(viewer: Viewer, rectangle: Rectangle, duration: number):
     // desktop viewport does not crop the poles.
     const fitHalf = Math.min(horizontalHalf, verticalHalf);
     const distance = radius / Math.sin(fitHalf) - radius;
-    const centerLon = normalizeLon(
-      CesiumMath.toDegrees(rectangle.west + span / 2),
-    );
-    const centerLat = CesiumMath.toDegrees(
-      (rectangle.north + rectangle.south) / 2,
-    );
     camera.flyTo({
-      destination: Cartesian3.fromDegrees(centerLon, centerLat, distance),
+      destination: Cartesian3.fromDegrees(HOME_LON, HOME_LAT, distance),
       duration,
     });
     return;
