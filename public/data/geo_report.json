@@ -349,540 +349,217 @@
       "lat": 51.26,
       "verified": true,
       "note": "斯海尔德河沿岸港区"
+    },
+    {
+      "tunnelled": true,
+      "cells": 3,
+      "line": [
+        [
+          121.55,
+          29.87
+        ],
+        [
+          121.625,
+          30.125
+        ],
+        [
+          121.625,
+          30.375
+        ]
+      ],
+      "name": "Ningbo",
+      "lon": 121.55,
+      "lat": 29.87,
+      "verified": false,
+      "note": "北仑港区"
+    },
+    {
+      "tunnelled": false,
+      "cells": 0,
+      "name": "Tanjung Pelepas",
+      "lon": 103.55,
+      "lat": 1.36,
+      "verified": false,
+      "note": "马来西亚丹戎帕拉帕斯港"
+    },
+    {
+      "tunnelled": false,
+      "cells": 0,
+      "name": "Nhava Sheva",
+      "lon": 72.95,
+      "lat": 18.95,
+      "verified": false,
+      "note": "印度贾瓦哈拉尔·尼赫鲁港"
+    },
+    {
+      "tunnelled": false,
+      "cells": 0,
+      "name": "Mundra",
+      "lon": 69.72,
+      "lat": 22.75,
+      "verified": false,
+      "note": "印度蒙德拉港"
+    },
+    {
+      "tunnelled": false,
+      "cells": 0,
+      "name": "Salalah",
+      "lon": 54.01,
+      "lat": 16.94,
+      "verified": false,
+      "note": "阿曼萨拉拉港"
+    },
+    {
+      "tunnelled": false,
+      "cells": 0,
+      "name": "Felixstowe",
+      "lon": 1.31,
+      "lat": 51.95,
+      "verified": false,
+      "note": "英国费利克斯托港"
+    },
+    {
+      "tunnelled": true,
+      "cells": 2,
+      "line": [
+        [
+          -0.32,
+          39.44
+        ],
+        [
+          -0.125,
+          39.375
+        ]
+      ],
+      "name": "Valencia",
+      "lon": -0.32,
+      "lat": 39.44,
+      "verified": false,
+      "note": "西班牙瓦伦西亚港"
+    },
+    {
+      "tunnelled": false,
+      "cells": 0,
+      "name": "Vancouver",
+      "lon": -123.11,
+      "lat": 49.29,
+      "verified": false,
+      "note": "加拿大温哥华港"
+    },
+    {
+      "tunnelled": false,
+      "cells": 0,
+      "name": "Savannah",
+      "lon": -81.1,
+      "lat": 32.13,
+      "verified": false,
+      "note": "美国萨凡纳港"
+    },
+    {
+      "tunnelled": false,
+      "cells": 0,
+      "name": "Houston",
+      "lon": -95.28,
+      "lat": 29.73,
+      "verified": false,
+      "note": "美国休斯顿港"
+    },
+    {
+      "tunnelled": false,
+      "cells": 0,
+      "name": "Balboa",
+      "lon": -79.56,
+      "lat": 8.94,
+      "verified": false,
+      "note": "巴拿马巴尔博亚港（太平洋侧）"
+    },
+    {
+      "tunnelled": false,
+      "cells": 0,
+      "name": "Santos",
+      "lon": -46.33,
+      "lat": -23.96,
+      "verified": false,
+      "note": "巴西桑托斯港"
+    },
+    {
+      "tunnelled": false,
+      "cells": 0,
+      "name": "Callao",
+      "lon": -77.15,
+      "lat": -12.06,
+      "verified": false,
+      "note": "秘鲁卡亚俄港"
+    },
+    {
+      "tunnelled": true,
+      "cells": 2,
+      "line": [
+        [
+          31.02,
+          -29.86
+        ],
+        [
+          31.125,
+          -30.125
+        ]
+      ],
+      "name": "Durban",
+      "lon": 31.02,
+      "lat": -29.86,
+      "verified": false,
+      "note": "南非德班港"
+    },
+    {
+      "tunnelled": false,
+      "cells": 0,
+      "name": "Mombasa",
+      "lon": 39.67,
+      "lat": -4.05,
+      "verified": false,
+      "note": "肯尼亚蒙巴萨港"
+    },
+    {
+      "tunnelled": true,
+      "cells": 2,
+      "line": [
+        [
+          -0.01,
+          5.63
+        ],
+        [
+          -0.125,
+          5.375
+        ]
+      ],
+      "name": "Tema",
+      "lon": -0.01,
+      "lat": 5.63,
+      "verified": false,
+      "note": "加纳特马港"
+    },
+    {
+      "tunnelled": false,
+      "cells": 0,
+      "name": "Melbourne",
+      "lon": 144.92,
+      "lat": -38.1,
+      "verified": false,
+      "note": "澳大利亚墨尔本港"
+    },
+    {
+      "tunnelled": false,
+      "cells": 0,
+      "name": "Sydney",
+      "lon": 151.21,
+      "lat": -33.86,
+      "verified": false,
+      "note": "澳大利亚悉尼港"
     }
   ],
   "routeCount": 40,
-  "legCount": 106,
+  "legCount": 197,
   "legCacheSize": 123,
-  "failures": [
-    {
-      "route": "S15",
-      "from": "Ningbo",
-      "to": "Shanghai"
-    },
-    {
-      "route": "S15",
-      "from": "Rotterdam",
-      "to": "Felixstowe"
-    },
-    {
-      "route": "S15",
-      "from": "Felixstowe",
-      "to": "Tanger Med"
-    },
-    {
-      "route": "S15",
-      "from": "Singapore",
-      "to": "Ningbo"
-    },
-    {
-      "route": "S16",
-      "from": "Piraeus",
-      "to": "Valencia"
-    },
-    {
-      "route": "S16",
-      "from": "Valencia",
-      "to": "Piraeus"
-    },
-    {
-      "route": "S17",
-      "from": "Tanjung Pelepas",
-      "to": "Port Klang"
-    },
-    {
-      "route": "S17",
-      "from": "Antwerp",
-      "to": "Felixstowe"
-    },
-    {
-      "route": "S17",
-      "from": "Felixstowe",
-      "to": "Tanger Med"
-    },
-    {
-      "route": "S17",
-      "from": "Colombo",
-      "to": "Tanjung Pelepas"
-    },
-    {
-      "route": "S18",
-      "from": "Ningbo",
-      "to": "Busan"
-    },
-    {
-      "route": "S18",
-      "from": "Busan",
-      "to": "Vancouver"
-    },
-    {
-      "route": "S18",
-      "from": "Vancouver",
-      "to": "Los Angeles"
-    },
-    {
-      "route": "S18",
-      "from": "Busan",
-      "to": "Ningbo"
-    },
-    {
-      "route": "S19",
-      "from": "Los Angeles",
-      "to": "Vancouver"
-    },
-    {
-      "route": "S19",
-      "from": "Vancouver",
-      "to": "Kaohsiung"
-    },
-    {
-      "route": "S20",
-      "from": "Busan",
-      "to": "Balboa"
-    },
-    {
-      "route": "S20",
-      "from": "Balboa",
-      "to": "Savannah"
-    },
-    {
-      "route": "S20",
-      "from": "Savannah",
-      "to": "New Jersey"
-    },
-    {
-      "route": "S20",
-      "from": "New Jersey",
-      "to": "Balboa"
-    },
-    {
-      "route": "S20",
-      "from": "Balboa",
-      "to": "Busan"
-    },
-    {
-      "route": "S21",
-      "from": "Rotterdam",
-      "to": "Felixstowe"
-    },
-    {
-      "route": "S21",
-      "from": "Felixstowe",
-      "to": "New Jersey"
-    },
-    {
-      "route": "S21",
-      "from": "New Jersey",
-      "to": "Savannah"
-    },
-    {
-      "route": "S21",
-      "from": "Savannah",
-      "to": "Felixstowe"
-    },
-    {
-      "route": "S21",
-      "from": "Felixstowe",
-      "to": "Rotterdam"
-    },
-    {
-      "route": "S22",
-      "from": "Valencia",
-      "to": "Tanger Med"
-    },
-    {
-      "route": "S22",
-      "from": "Tanger Med",
-      "to": "Houston"
-    },
-    {
-      "route": "S22",
-      "from": "Houston",
-      "to": "New Jersey"
-    },
-    {
-      "route": "S22",
-      "from": "Tanger Med",
-      "to": "Valencia"
-    },
-    {
-      "route": "S23",
-      "from": "Shanghai",
-      "to": "Ningbo"
-    },
-    {
-      "route": "S23",
-      "from": "Ningbo",
-      "to": "Busan"
-    },
-    {
-      "route": "S23",
-      "from": "Busan",
-      "to": "Balboa"
-    },
-    {
-      "route": "S23",
-      "from": "Balboa",
-      "to": "Callao"
-    },
-    {
-      "route": "S23",
-      "from": "Callao",
-      "to": "Balboa"
-    },
-    {
-      "route": "S23",
-      "from": "Balboa",
-      "to": "Busan"
-    },
-    {
-      "route": "S24",
-      "from": "Tanger Med",
-      "to": "Santos"
-    },
-    {
-      "route": "S24",
-      "from": "Santos",
-      "to": "Tanger Med"
-    },
-    {
-      "route": "S25",
-      "from": "Cartagena",
-      "to": "Balboa"
-    },
-    {
-      "route": "S25",
-      "from": "Balboa",
-      "to": "Callao"
-    },
-    {
-      "route": "S25",
-      "from": "Callao",
-      "to": "Balboa"
-    },
-    {
-      "route": "S25",
-      "from": "Balboa",
-      "to": "Cartagena"
-    },
-    {
-      "route": "S26",
-      "from": "Colombo",
-      "to": "Mombasa"
-    },
-    {
-      "route": "S26",
-      "from": "Mombasa",
-      "to": "Colombo"
-    },
-    {
-      "route": "S27",
-      "from": "Ningbo",
-      "to": "Singapore"
-    },
-    {
-      "route": "S27",
-      "from": "Colombo",
-      "to": "Durban"
-    },
-    {
-      "route": "S27",
-      "from": "Durban",
-      "to": "Colombo"
-    },
-    {
-      "route": "S27",
-      "from": "Singapore",
-      "to": "Ningbo"
-    },
-    {
-      "route": "S28",
-      "from": "Tanger Med",
-      "to": "Tema"
-    },
-    {
-      "route": "S28",
-      "from": "Tema",
-      "to": "Tanger Med"
-    },
-    {
-      "route": "S29",
-      "from": "Durban",
-      "to": "Tema"
-    },
-    {
-      "route": "S29",
-      "from": "Tema",
-      "to": "Tanger Med"
-    },
-    {
-      "route": "S29",
-      "from": "Tanger Med",
-      "to": "Tema"
-    },
-    {
-      "route": "S29",
-      "from": "Tema",
-      "to": "Durban"
-    },
-    {
-      "route": "S30",
-      "from": "Shanghai",
-      "to": "Ningbo"
-    },
-    {
-      "route": "S30",
-      "from": "Ningbo",
-      "to": "Singapore"
-    },
-    {
-      "route": "S30",
-      "from": "Singapore",
-      "to": "Melbourne"
-    },
-    {
-      "route": "S30",
-      "from": "Melbourne",
-      "to": "Sydney"
-    },
-    {
-      "route": "S30",
-      "from": "Sydney",
-      "to": "Singapore"
-    },
-    {
-      "route": "S31",
-      "from": "Port Klang",
-      "to": "Tanjung Pelepas"
-    },
-    {
-      "route": "S31",
-      "from": "Tanjung Pelepas",
-      "to": "Melbourne"
-    },
-    {
-      "route": "S31",
-      "from": "Melbourne",
-      "to": "Sydney"
-    },
-    {
-      "route": "S31",
-      "from": "Sydney",
-      "to": "Tanjung Pelepas"
-    },
-    {
-      "route": "S31",
-      "from": "Tanjung Pelepas",
-      "to": "Port Klang"
-    },
-    {
-      "route": "S32",
-      "from": "Melbourne",
-      "to": "Sydney"
-    },
-    {
-      "route": "S32",
-      "from": "Sydney",
-      "to": "Melbourne"
-    },
-    {
-      "route": "S33",
-      "from": "Nhava Sheva",
-      "to": "Mundra"
-    },
-    {
-      "route": "S33",
-      "from": "Mundra",
-      "to": "Colombo"
-    },
-    {
-      "route": "S33",
-      "from": "Colombo",
-      "to": "Nhava Sheva"
-    },
-    {
-      "route": "S34",
-      "from": "Jebel Ali",
-      "to": "Salalah"
-    },
-    {
-      "route": "S34",
-      "from": "Salalah",
-      "to": "Mundra"
-    },
-    {
-      "route": "S34",
-      "from": "Mundra",
-      "to": "Nhava Sheva"
-    },
-    {
-      "route": "S34",
-      "from": "Nhava Sheva",
-      "to": "Jebel Ali"
-    },
-    {
-      "route": "S35",
-      "from": "Piraeus",
-      "to": "Valencia"
-    },
-    {
-      "route": "S35",
-      "from": "Valencia",
-      "to": "Tanger Med"
-    },
-    {
-      "route": "S35",
-      "from": "Tanger Med",
-      "to": "Valencia"
-    },
-    {
-      "route": "S35",
-      "from": "Valencia",
-      "to": "Piraeus"
-    },
-    {
-      "route": "S36",
-      "from": "New Jersey",
-      "to": "Savannah"
-    },
-    {
-      "route": "S36",
-      "from": "Savannah",
-      "to": "Houston"
-    },
-    {
-      "route": "S36",
-      "from": "Houston",
-      "to": "Cartagena"
-    },
-    {
-      "route": "S37",
-      "from": "Singapore",
-      "to": "Tanjung Pelepas"
-    },
-    {
-      "route": "S37",
-      "from": "Tanjung Pelepas",
-      "to": "Port Klang"
-    },
-    {
-      "route": "S38",
-      "from": "Colombo",
-      "to": "Nhava Sheva"
-    },
-    {
-      "route": "S38",
-      "from": "Nhava Sheva",
-      "to": "Salalah"
-    },
-    {
-      "route": "S38",
-      "from": "Salalah",
-      "to": "Colombo"
-    },
-    {
-      "route": "S39",
-      "from": "Tanger Med",
-      "to": "Valencia"
-    },
-    {
-      "route": "S39",
-      "from": "Valencia",
-      "to": "Felixstowe"
-    },
-    {
-      "route": "S39",
-      "from": "Felixstowe",
-      "to": "Tanger Med"
-    },
-    {
-      "route": "S40",
-      "from": "Cartagena",
-      "to": "Balboa"
-    },
-    {
-      "route": "S40",
-      "from": "Balboa",
-      "to": "Houston"
-    },
-    {
-      "route": "S40",
-      "from": "Houston",
-      "to": "Cartagena"
-    }
-  ],
-  "detourWarnings": [
-    {
-      "route": "S1",
-      "from": "Tanger Med",
-      "to": "Rotterdam",
-      "routeNm": 2275.2,
-      "nominalNm": 1048.0,
-      "ratio": 2.17
-    },
-    {
-      "route": "S1",
-      "from": "Rotterdam",
-      "to": "Tanger Med",
-      "routeNm": 2252.1,
-      "nominalNm": 1048.0,
-      "ratio": 2.15
-    },
-    {
-      "route": "S6",
-      "from": "Rotterdam",
-      "to": "Tanger Med",
-      "routeNm": 2252.1,
-      "nominalNm": 1048.0,
-      "ratio": 2.15
-    },
-    {
-      "route": "S6",
-      "from": "Tanger Med",
-      "to": "Rotterdam",
-      "routeNm": 2275.2,
-      "nominalNm": 1048.0,
-      "ratio": 2.17
-    },
-    {
-      "route": "S15",
-      "from": "Tanger Med",
-      "to": "Rotterdam",
-      "routeNm": 2275.2,
-      "nominalNm": 1048.0,
-      "ratio": 2.17
-    },
-    {
-      "route": "S24",
-      "from": "Rotterdam",
-      "to": "Tanger Med",
-      "routeNm": 2252.1,
-      "nominalNm": 1048.0,
-      "ratio": 2.15
-    },
-    {
-      "route": "S24",
-      "from": "Tanger Med",
-      "to": "Rotterdam",
-      "routeNm": 2275.2,
-      "nominalNm": 1048.0,
-      "ratio": 2.17
-    },
-    {
-      "route": "S28",
-      "from": "Rotterdam",
-      "to": "Tanger Med",
-      "routeNm": 2252.1,
-      "nominalNm": 1048.0,
-      "ratio": 2.15
-    },
-    {
-      "route": "S28",
-      "from": "Tanger Med",
-      "to": "Rotterdam",
-      "routeNm": 2275.2,
-      "nominalNm": 1048.0,
-      "ratio": 2.17
-    }
-  ]
+  "failures": [],
+  "detourWarnings": []
 }

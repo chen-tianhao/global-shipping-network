@@ -90,10 +90,10 @@ for (const route of routes) {
     const turn = turnDeg(w[i - 1], w[i], w[i + 1]);
     const where = `${route.id} ${w[i][0].toFixed(2)},${w[i][1].toFixed(2)}`;
     if (turn >= 150) {
-      // A reversal between two long legs is a legitimate turnaround (the
-      // route rounds a cape or enters a dead-end gulf); only short-leg
-      // reversals are splice artifacts.
-      const legit = before > REVERSAL_LONG_KM && after > REVERSAL_LONG_KM;
+      // A reversal where either leg is long is a legitimate turnaround (the
+      // route rounds a cape, enters a dead-end gulf, or makes a port call);
+      // only reversals where BOTH legs are short are splice artifacts.
+      const legit = before > REVERSAL_LONG_KM || after > REVERSAL_LONG_KM;
       if (!legit) {
         reversals += 1;
         problems.push(

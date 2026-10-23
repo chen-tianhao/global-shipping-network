@@ -219,6 +219,186 @@
       "coordsVerified": true,
       "note": "斯海尔德河沿岸港区",
       "tunnelledToSea": false
+    },
+    {
+      "id": "ningbo",
+      "name": "Ningbo",
+      "lon": 121.55,
+      "lat": 29.87,
+      "berthCount": 2,
+      "coordsVerified": false,
+      "note": "北仑港区",
+      "tunnelledToSea": true
+    },
+    {
+      "id": "tanjung-pelepas",
+      "name": "Tanjung Pelepas",
+      "lon": 103.55,
+      "lat": 1.36,
+      "berthCount": 3,
+      "coordsVerified": false,
+      "note": "马来西亚丹戎帕拉帕斯港",
+      "tunnelledToSea": false
+    },
+    {
+      "id": "nhava-sheva",
+      "name": "Nhava Sheva",
+      "lon": 72.95,
+      "lat": 18.95,
+      "berthCount": 2,
+      "coordsVerified": false,
+      "note": "印度贾瓦哈拉尔·尼赫鲁港",
+      "tunnelledToSea": false
+    },
+    {
+      "id": "mundra",
+      "name": "Mundra",
+      "lon": 69.72,
+      "lat": 22.75,
+      "berthCount": 2,
+      "coordsVerified": false,
+      "note": "印度蒙德拉港",
+      "tunnelledToSea": false
+    },
+    {
+      "id": "salalah",
+      "name": "Salalah",
+      "lon": 54.01,
+      "lat": 16.94,
+      "berthCount": 2,
+      "coordsVerified": false,
+      "note": "阿曼萨拉拉港",
+      "tunnelledToSea": false
+    },
+    {
+      "id": "felixstowe",
+      "name": "Felixstowe",
+      "lon": 1.31,
+      "lat": 51.95,
+      "berthCount": 2,
+      "coordsVerified": false,
+      "note": "英国费利克斯托港",
+      "tunnelledToSea": false
+    },
+    {
+      "id": "valencia",
+      "name": "Valencia",
+      "lon": -0.32,
+      "lat": 39.44,
+      "berthCount": 2,
+      "coordsVerified": false,
+      "note": "西班牙瓦伦西亚港",
+      "tunnelledToSea": true
+    },
+    {
+      "id": "vancouver",
+      "name": "Vancouver",
+      "lon": -123.11,
+      "lat": 49.29,
+      "berthCount": 2,
+      "coordsVerified": false,
+      "note": "加拿大温哥华港",
+      "tunnelledToSea": false
+    },
+    {
+      "id": "savannah",
+      "name": "Savannah",
+      "lon": -81.1,
+      "lat": 32.13,
+      "berthCount": 2,
+      "coordsVerified": false,
+      "note": "美国萨凡纳港",
+      "tunnelledToSea": false
+    },
+    {
+      "id": "houston",
+      "name": "Houston",
+      "lon": -95.28,
+      "lat": 29.73,
+      "berthCount": 2,
+      "coordsVerified": false,
+      "note": "美国休斯顿港",
+      "tunnelledToSea": false
+    },
+    {
+      "id": "balboa",
+      "name": "Balboa",
+      "lon": -79.56,
+      "lat": 8.94,
+      "berthCount": 3,
+      "coordsVerified": false,
+      "note": "巴拿马巴尔博亚港（太平洋侧）",
+      "tunnelledToSea": false
+    },
+    {
+      "id": "santos",
+      "name": "Santos",
+      "lon": -46.33,
+      "lat": -23.96,
+      "berthCount": 2,
+      "coordsVerified": false,
+      "note": "巴西桑托斯港",
+      "tunnelledToSea": false
+    },
+    {
+      "id": "callao",
+      "name": "Callao",
+      "lon": -77.15,
+      "lat": -12.06,
+      "berthCount": 2,
+      "coordsVerified": false,
+      "note": "秘鲁卡亚俄港",
+      "tunnelledToSea": false
+    },
+    {
+      "id": "durban",
+      "name": "Durban",
+      "lon": 31.02,
+      "lat": -29.86,
+      "berthCount": 2,
+      "coordsVerified": false,
+      "note": "南非德班港",
+      "tunnelledToSea": true
+    },
+    {
+      "id": "mombasa",
+      "name": "Mombasa",
+      "lon": 39.67,
+      "lat": -4.05,
+      "berthCount": 2,
+      "coordsVerified": false,
+      "note": "肯尼亚蒙巴萨港",
+      "tunnelledToSea": false
+    },
+    {
+      "id": "tema",
+      "name": "Tema",
+      "lon": -0.01,
+      "lat": 5.63,
+      "berthCount": 2,
+      "coordsVerified": false,
+      "note": "加纳特马港",
+      "tunnelledToSea": true
+    },
+    {
+      "id": "melbourne",
+      "name": "Melbourne",
+      "lon": 144.92,
+      "lat": -38.1,
+      "berthCount": 2,
+      "coordsVerified": false,
+      "note": "澳大利亚墨尔本港",
+      "tunnelledToSea": false
+    },
+    {
+      "id": "sydney",
+      "name": "Sydney",
+      "lon": 151.21,
+      "lat": -33.86,
+      "berthCount": 2,
+      "coordsVerified": false,
+      "note": "澳大利亚悉尼港",
+      "tunnelledToSea": false
     }
   ]
 }

@@ -684,7 +684,7 @@ def collapse_retraces(points, tol_km: float = 1.5, lookback: int = 30):
     return out
 
 
-def remove_micro_spikes(points, max_seg_km: float = 5.0,
+def remove_micro_spikes(points, max_seg_km: float = 15.0,
                         min_turn_deg: float = 150.0):
     """Drop spike tips left by a failed fillet at a near-reversal.
 
@@ -692,7 +692,8 @@ def remove_micro_spikes(points, max_seg_km: float = 5.0,
     fillet as-is.  On short legs (a port gate hop, a centreline jog) that
     leaves a visible hairpin.  A turn over ``min_turn_deg`` where either
     adjacent leg is sub-``max_seg_km`` is geometrically indistinguishable
-    from a doubled-back spike, so the tip is simply removed.
+    from a doubled-back spike, so the tip is simply removed.  The threshold
+    is 15 km so that ocean-scale turnarounds (23/345 km port calls) survive.
     """
     if len(points) < 3:
         return [tuple(p) for p in points]
@@ -1366,9 +1367,15 @@ def _pack_route(route_id, route_rows, segments, mask=None):
         chained = dedupe(chained)
         # Must run last: the fillet's U-turn can fail the water check and leave
         # a hairpin tip, and collapse_retraces alone only catches exact
-        # retraces.  Short-leg + large-turn tips are removed here.
-        chained = remove_micro_spikes(chained)
-        chained = dedupe(chained)
+        # retraces.  Iterate because each pass can expose new spike tips whose
+        # turn angle changes once a neighbour is removed.
+        prev_len = len(chained)
+        while True:
+            chained = remove_micro_spikes(chained)
+            chained = dedupe(chained)
+            if len(chained) >= prev_len:
+                break
+            prev_len = len(chained)
     meta = route_rows.get(route_id, {})
     total_nm = round(sum(float(s["routeDistanceNm"]) for s in segments), 1)
     nominal_nm = round(sum(float(s["nominalDistanceNm"]) for s in segments), 1)
